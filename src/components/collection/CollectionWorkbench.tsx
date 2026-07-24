@@ -62,7 +62,11 @@ type StatusFilter = "all" | CollectionStatus;
 
 type SearchResult = CollectionFragrance;
 
-export function CollectionWorkbench() {
+export function CollectionWorkbench({
+  catalogSizeLabel,
+}: {
+  catalogSizeLabel: string;
+}) {
   const hydrated = useHydrated();
   const [entries, setEntries] = useState<CollectionEntry[]>([]);
   const [filter, setFilter] = useState<StatusFilter>("all");
@@ -216,7 +220,7 @@ export function CollectionWorkbench() {
           <div>
             <h2 className="font-semibold">Add a fragrance</h2>
             <p className="mt-1 text-sm text-muted">
-              Search 74,000+ catalog entries, then choose its place.
+              Search {catalogSizeLabel} catalog entries, then choose its place.
             </p>
           </div>
         </div>

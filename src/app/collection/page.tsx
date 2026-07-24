@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { CollectionWorkbench } from "@/components/collection/CollectionWorkbench";
+import { getCatalogSizeLabel } from "@/lib/catalog";
 
 export const metadata: Metadata = {
   title: "Collection Analyzer — This or That",
@@ -9,5 +10,5 @@ export const metadata: Metadata = {
 };
 
 export default function CollectionPage() {
-  return <CollectionWorkbench />;
+  return <CollectionWorkbench catalogSizeLabel={getCatalogSizeLabel()} />;
 }

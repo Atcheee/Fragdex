@@ -195,6 +195,16 @@ export function getAllCatalogFragrances(): readonly CatalogFragrance[] {
   return catalogFragrances;
 }
 
+/** Rounded catalog size floored to the nearest thousand (e.g. 91630 → 91000). */
+export function getCatalogSizeRounded(): number {
+  return Math.floor(catalogFragrances.length / 1000) * 1000;
+}
+
+/** Display label, e.g. 91630 → "91,000+". */
+export function getCatalogSizeLabel(): string {
+  return `${getCatalogSizeRounded().toLocaleString("en-US")}+`;
+}
+
 export function getFragranceBySlug(
   slug: string,
 ): CatalogFragrance | undefined {

@@ -7,10 +7,11 @@ import {
   getBrowseMeta,
 } from "@/lib/catalog-browse-houses";
 
+const browseMeta = getBrowseMeta();
+
 export const metadata: Metadata = {
   title: "Designer houses — This or That",
-  description:
-    "Explore fragrance designer houses and browse their collections, signature accords, ratings, and release years.",
+  description: `Explore ${browseMeta.houseCount.toLocaleString("en-US")} fragrance designer houses and browse their collections, signature accords, ratings, and release years.`,
   alternates: { canonical: "/houses" },
 };
 

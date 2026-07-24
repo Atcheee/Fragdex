@@ -10,10 +10,11 @@ import {
   getFeaturedBrowseHouses,
 } from "@/lib/catalog-browse-fragrances";
 
+const browseMeta = getBrowseFragranceMeta();
+
 export const metadata: Metadata = {
   title: "Browse fragrances — This or That",
-  description:
-    "Browse thousands of fragrances by house, accord, release year, rating, and popularity.",
+  description: `Browse ${browseMeta.fragranceCount.toLocaleString("en-US")} fragrances by house, accord, release year, rating, and popularity.`,
   alternates: { canonical: "/fragrances" },
 };
 
