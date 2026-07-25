@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { TastePassportDashboard } from "@/components/TastePassportDashboard";
-import { getAllCatalogFragrances } from "@/lib/catalog";
+import { getPoolCandidates } from "@/lib/catalog";
 import { fragranceToTasteFragrance } from "@/lib/taste-passport";
 
 export const metadata: Metadata = {
@@ -20,14 +20,8 @@ export default async function TastePassportPage({
   const params = await searchParams;
   const sharedValue =
     typeof params.share === "string" ? params.share : params.share?.[0];
-  const candidates = [...getAllCatalogFragrances()]
-    .filter((fragrance) => fragrance.rating > 0 && fragrance.year > 0)
-    .sort(
-      (a, b) =>
-        (b.votes ?? 0) - (a.votes ?? 0) ||
-        b.rating - a.rating,
-    )
-    .slice(0, 180)
+  const candidates = getPoolCandidates({ requiresRating: true }, 180)
+    .filter((fragrance) => fragrance.year > 0)
     .map(fragranceToTasteFragrance);
 
   return (

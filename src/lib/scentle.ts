@@ -1,9 +1,6 @@
 import "server-only";
 
-import {
-  getAllCatalogFragrances,
-  getFragranceById,
-} from "@/lib/catalog";
+import { getFragranceById, getScentleDailyPool } from "@/lib/catalog";
 import { hashSeed, utcDateKey } from "@/lib/daily";
 import {
   SCENTLE_MAX_GUESSES,
@@ -12,24 +9,6 @@ import {
 } from "@/lib/scentle-types";
 import { scoreFragranceSimilarity } from "@/lib/fragrance-similarity";
 import type { Fragrance } from "@/lib/types";
-import { allNotes } from "@/lib/types";
-
-const DAILY_POOL = getAllCatalogFragrances()
-  .filter(
-    (fragrance) =>
-      fragrance.year > 0 &&
-      fragrance.rating > 0 &&
-      (fragrance.votes ?? 0) >= 250 &&
-      allNotes(fragrance).length >= 3 &&
-      fragrance.accords.length >= 2,
-  )
-  .sort(
-    (a, b) =>
-      (b.votes ?? 0) - (a.votes ?? 0) ||
-      b.rating - a.rating ||
-      a.id.localeCompare(b.id),
-  )
-  .slice(0, 1_200);
 
 function summary(fragrance: Fragrance): ScentleFragranceSummary {
   return {
@@ -42,11 +21,12 @@ function summary(fragrance: Fragrance): ScentleFragranceSummary {
 }
 
 export function getDailyScentleAnswer(date = new Date()): Fragrance {
-  if (DAILY_POOL.length === 0) {
+  const pool = getScentleDailyPool();
+  if (pool.length === 0) {
     throw new Error("No fragrances are eligible for Scentle.");
   }
   const seed = hashSeed(`scentle:${utcDateKey(date)}`);
-  return DAILY_POOL[seed % DAILY_POOL.length]!;
+  return pool[seed % pool.length]!;
 }
 
 export function getScentleAnswerSummary(

@@ -1,8 +1,5 @@
 import type { MetadataRoute } from "next";
-import {
-  getAllCatalogFragrances,
-  getAllHouseSummaries,
-} from "@/lib/catalog";
+import { getAllHouseSummaries, iterateFragranceSlugs } from "@/lib/catalog";
 import { MODES } from "@/lib/modes";
 
 const siteUrl =
@@ -44,14 +41,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ];
 
-  const fragranceRoutes: MetadataRoute.Sitemap = getAllCatalogFragrances().map(
-    (fragrance) => ({
-      url: `${siteUrl}/fragrance/${fragrance.slug}`,
+  const fragranceRoutes: MetadataRoute.Sitemap = [];
+  for (const slug of iterateFragranceSlugs()) {
+    fragranceRoutes.push({
+      url: `${siteUrl}/fragrance/${slug}`,
       lastModified,
       changeFrequency: "monthly",
       priority: 0.6,
-    }),
-  );
+    });
+  }
 
   const gameRoutes: MetadataRoute.Sitemap = MODES.map((mode) => ({
     url: `${siteUrl}/play/${mode.id}`,

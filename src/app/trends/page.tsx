@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import topHouses from "@/data/generated/top-houses.json";
 import { FragranceTrendExplorer } from "@/components/FragranceTrendExplorer";
+import { getFeaturedBrowseHouses } from "@/lib/catalog-browse-fragrances";
 import {
-  buildTrendExplorerData,
   defaultTrendFilters,
+  getTrendExplorerData,
 } from "@/lib/fragrance-trends";
 
 export const metadata: Metadata = {
@@ -13,13 +13,13 @@ export const metadata: Metadata = {
   alternates: { canonical: "/trends" },
 };
 
-export default function TrendsPage() {
-  const initialData = buildTrendExplorerData(defaultTrendFilters);
+export default async function TrendsPage() {
+  const initialData = await getTrendExplorerData(defaultTrendFilters);
 
   return (
     <FragranceTrendExplorer
       initialData={initialData}
-      houses={topHouses.slice(0, 100)}
+      houses={[...getFeaturedBrowseHouses()]}
     />
   );
 }

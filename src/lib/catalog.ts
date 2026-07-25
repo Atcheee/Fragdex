@@ -1,10 +1,27 @@
 import "server-only";
 
-import rawData from "@/data/fragrances.json";
+
+import {
+  all,
+  get,
+  iterate,
+  metaValue,
+  type SqlParameter,
+} from "@/lib/catalog-db";
+import {
+  GAME_POOL_LIMIT,
+  RECOMMENDATION_CANDIDATE_LIMIT,
+  RELATED_CANDIDATE_LIMIT,
+  SCENTLE_POOL_LIMIT,
+  SEARCH_CANDIDATE_LIMIT,
+} from "@/lib/catalog-limits";
+import { TERM_KIND, searchKey, slugify } from "@/lib/catalog-schema";
 import { expandBrandSearchTerms } from "@/lib/brand-aliases";
-import type { Fragrance } from "@/lib/types";
+import type { Fragrance, WearOccasion } from "@/lib/types";
 import { allNotes } from "@/lib/types";
 import { scoreFragranceSimilarity } from "@/lib/fragrance-similarity";
+
+export { slugify };
 
 export interface CatalogFragrance extends Fragrance {
   slug: string;
@@ -42,162 +59,147 @@ export interface CatalogSimilarity {
   sameHouse: boolean;
 }
 
-const fragrances = rawData as Fragrance[];
-const COMBINING_MARKS = /[\u0300-\u036f]/g;
-const NON_ALPHANUMERIC = /[^a-z0-9]+/g;
-const SEARCH_NON_ALPHANUMERIC = /[^a-z0-9]+/g;
-
-export function slugify(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(COMBINING_MARKS, "")
-    .toLowerCase()
-    .replace(NON_ALPHANUMERIC, "-")
-    .replace(/^-+|-+$/g, "");
+interface FragranceRow {
+  id: string;
+  slug: string;
+  name: string;
+  house: string;
+  house_slug: string;
+  year: number;
+  rating: number;
+  price: number;
+  votes: number;
+  image_url: string | null;
+  longevity: string | null;
+  sillage: string | null;
+  top_notes: string;
+  heart_notes: string;
+  base_notes: string;
+  accords: string;
+  description: string;
+  wear: string | null;
 }
 
-function searchKey(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(COMBINING_MARKS, "")
-    .toLowerCase()
-    .replace(SEARCH_NON_ALPHANUMERIC, " ")
-    .trim()
-    .replace(/\s+/g, " ");
+interface HouseRow {
+  slug: string;
+  name: string;
+  fragrance_count: number;
+  average_rating: number;
+  first_year: number | null;
+  latest_year: number | null;
+  top_accords: string;
 }
 
-function chooseHouseName(entries: Fragrance[]): string {
-  const counts = new Map<string, number>();
-  for (const fragrance of entries) {
-    counts.set(fragrance.house, (counts.get(fragrance.house) ?? 0) + 1);
-  }
-  return [...counts.entries()]
-    .sort(([a, aCount], [b, bCount]) => bCount - aCount || a.localeCompare(b))[0]![0];
-}
+const FRAGRANCE_COLUMNS = `
+  f.id, f.slug, f.name, f.house, f.house_slug, f.year, f.rating, f.price,
+  f.votes, f.image_url, f.longevity, f.sillage, f.top_notes, f.heart_notes,
+  f.base_notes, f.accords, f.description, f.wear
+`;
 
-const houseGroups = new Map<string, Fragrance[]>();
-for (const fragrance of fragrances) {
-  const houseSlug = slugify(fragrance.house);
-  const group = houseGroups.get(houseSlug);
-  if (group) group.push(fragrance);
-  else houseGroups.set(houseSlug, [fragrance]);
-}
-
-const houseNames = new Map<string, string>();
-for (const [houseSlug, entries] of houseGroups) {
-  houseNames.set(houseSlug, chooseHouseName(entries));
-}
-
-const baseSlugGroups = new Map<string, Fragrance[]>();
-for (const fragrance of fragrances) {
-  const baseSlug = `${slugify(fragrance.house)}-${slugify(fragrance.name)}`;
-  const group = baseSlugGroups.get(baseSlug);
-  if (group) group.push(fragrance);
-  else baseSlugGroups.set(baseSlug, [fragrance]);
-}
-
-const catalogFragrances: CatalogFragrance[] = [];
-const fragranceBySlug = new Map<string, CatalogFragrance>();
-const fragranceById = new Map<string, CatalogFragrance>();
-const fragrancesByHouse = new Map<string, CatalogFragrance[]>();
-
-for (const fragrance of fragrances) {
-  const houseSlug = slugify(fragrance.house);
-  const baseSlug = `${houseSlug}-${slugify(fragrance.name)}`;
-  const hasCollision = (baseSlugGroups.get(baseSlug)?.length ?? 0) > 1;
-  const slug = hasCollision ? `${baseSlug}-${slugify(fragrance.id)}` : baseSlug;
-  const catalogFragrance: CatalogFragrance = {
-    ...fragrance,
-    house: houseNames.get(houseSlug) ?? fragrance.house,
-    slug,
-    houseSlug,
-  };
-
-  catalogFragrances.push(catalogFragrance);
-  fragranceBySlug.set(slug, catalogFragrance);
-  fragranceById.set(fragrance.id, catalogFragrance);
-
-  const houseCatalog = fragrancesByHouse.get(houseSlug);
-  if (houseCatalog) houseCatalog.push(catalogFragrance);
-  else fragrancesByHouse.set(houseSlug, [catalogFragrance]);
-}
-
-const searchRecords = catalogFragrances.map((fragrance) => ({
-  fragrance,
-  name: searchKey(fragrance.name),
-  house: searchKey(fragrance.house),
-  combined: searchKey(`${fragrance.name} ${fragrance.house}`),
-}));
-
-const accordIndex = new Map<string, CatalogFragrance[]>();
-const noteIndex = new Map<string, CatalogFragrance[]>();
-for (const fragrance of catalogFragrances) {
-  for (const accord of new Set(fragrance.accords.map(searchKey))) {
-    const entries = accordIndex.get(accord);
-    if (entries) entries.push(fragrance);
-    else accordIndex.set(accord, [fragrance]);
-  }
-  for (const note of new Set(allNotes(fragrance).map(searchKey))) {
-    const entries = noteIndex.get(note);
-    if (entries) entries.push(fragrance);
-    else noteIndex.set(note, [fragrance]);
-  }
-}
-
-function summarizeHouse(
-  slug: string,
-  entries: CatalogFragrance[],
-): HouseSummary {
-  let ratingTotal = 0;
-  let ratedCount = 0;
-  let firstYear = Number.POSITIVE_INFINITY;
-  let latestYear = 0;
-  const accordCounts = new Map<string, { name: string; count: number }>();
-
-  for (const fragrance of entries) {
-    if (fragrance.rating > 0) {
-      ratingTotal += fragrance.rating;
-      ratedCount += 1;
-    }
-    if (fragrance.year > 0) {
-      firstYear = Math.min(firstYear, fragrance.year);
-      latestYear = Math.max(latestYear, fragrance.year);
-    }
-    for (const accord of new Set(fragrance.accords)) {
-      const key = searchKey(accord);
-      const current = accordCounts.get(key);
-      accordCounts.set(key, {
-        name: current?.name ?? accord,
-        count: (current?.count ?? 0) + 1,
-      });
-    }
-  }
-
+function toFragrance(row: FragranceRow): CatalogFragrance {
   return {
-    slug,
-    name: houseNames.get(slug) ?? entries[0]?.house ?? slug,
-    fragranceCount: entries.length,
-    averageRating: ratedCount > 0 ? ratingTotal / ratedCount : 0,
-    firstYear: Number.isFinite(firstYear) ? firstYear : null,
-    latestYear: latestYear > 0 ? latestYear : null,
-    topAccords: [...accordCounts.values()]
-      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
-      .slice(0, 8),
+    id: row.id,
+    name: row.name,
+    house: row.house,
+    year: row.year,
+    rating: row.rating,
+    price: row.price,
+    topNotes: JSON.parse(row.top_notes) as string[],
+    heartNotes: JSON.parse(row.heart_notes) as string[],
+    baseNotes: JSON.parse(row.base_notes) as string[],
+    accords: JSON.parse(row.accords) as string[],
+    description: row.description,
+    votes: row.votes,
+    slug: row.slug,
+    houseSlug: row.house_slug,
+    ...(row.image_url ? { imageUrl: row.image_url } : {}),
+    ...(row.longevity ? { longevity: row.longevity } : {}),
+    ...(row.sillage ? { sillage: row.sillage } : {}),
+    ...(row.wear
+      ? { wear: JSON.parse(row.wear) as Partial<Record<WearOccasion, number>> }
+      : {}),
   };
 }
 
-const houseSummaries = new Map<string, HouseSummary>();
-for (const [houseSlug, entries] of fragrancesByHouse) {
-  houseSummaries.set(houseSlug, summarizeHouse(houseSlug, entries));
+function toHouseSummary(row: HouseRow): HouseSummary {
+  return {
+    slug: row.slug,
+    name: row.name,
+    fragranceCount: row.fragrance_count,
+    averageRating: row.average_rating,
+    firstYear: row.first_year,
+    latestYear: row.latest_year,
+    topAccords: JSON.parse(row.top_accords) as HouseSummary["topAccords"],
+  };
 }
 
-export function getAllCatalogFragrances(): readonly CatalogFragrance[] {
-  return catalogFragrances;
+function selectFragrances(
+  sql: string,
+  ...parameters: SqlParameter[]
+): CatalogFragrance[] {
+  return all<FragranceRow>(sql, ...parameters).map(toFragrance);
+}
+
+function toSearchResult(fragrance: CatalogFragrance): CatalogSearchResult {
+  return {
+    id: fragrance.id,
+    name: fragrance.name,
+    house: fragrance.house,
+    year: fragrance.year,
+    slug: fragrance.slug,
+    imageUrl: fragrance.imageUrl,
+  };
+}
+
+export function getFragranceById(id: string): CatalogFragrance | undefined {
+  return selectFragrances(
+    `SELECT ${FRAGRANCE_COLUMNS} FROM fragrance f WHERE f.id = ?`,
+    id,
+  )[0];
+}
+
+export function getFragranceBySlug(slug: string): CatalogFragrance | undefined {
+  return selectFragrances(
+    `SELECT ${FRAGRANCE_COLUMNS} FROM fragrance f WHERE f.slug = ?`,
+    slug,
+  )[0];
+}
+
+export function getFragrancesByIds(ids: readonly string[]): CatalogFragrance[] {
+  if (ids.length === 0) return [];
+  const placeholders = ids.map(() => "?").join(",");
+  return selectFragrances(
+    `SELECT ${FRAGRANCE_COLUMNS} FROM fragrance f WHERE f.id IN (${placeholders})`,
+    ...ids,
+  );
+}
+
+/**
+ * The subset of `names` that a real fragrance already uses, compared on the
+ * normalized key the catalog is indexed by. Returns the names as given, so
+ * callers can filter their own list directly.
+ */
+export function findExistingNames(names: readonly string[]): Set<string> {
+  const keys = [...new Set(names.map(searchKey))].filter(Boolean);
+  if (keys.length === 0) return new Set();
+
+  const placeholders = keys.map(() => "?").join(",");
+  const rows = all<{ name_key: string }>(
+    `SELECT DISTINCT name_key FROM fragrance WHERE name_key IN (${placeholders})`,
+    ...keys,
+  );
+  const existing = new Set(rows.map((row) => row.name_key));
+
+  return new Set(names.filter((name) => existing.has(searchKey(name))));
+}
+
+export function getCatalogSize(): number {
+  return Number(metaValue("fragranceCount") ?? 0);
 }
 
 /** Rounded catalog size floored to the nearest thousand (e.g. 91630 → 91000). */
 export function getCatalogSizeRounded(): number {
-  return Math.floor(catalogFragrances.length / 1000) * 1000;
+  return Math.floor(getCatalogSize() / 1000) * 1000;
 }
 
 /** Display label, e.g. 91630 → "91,000+". */
@@ -205,40 +207,59 @@ export function getCatalogSizeLabel(): string {
   return `${getCatalogSizeRounded().toLocaleString("en-US")}+`;
 }
 
-export function getFragranceBySlug(
-  slug: string,
-): CatalogFragrance | undefined {
-  return fragranceBySlug.get(slug);
-}
-
-export function getFragranceById(id: string): CatalogFragrance | undefined {
-  return fragranceById.get(id);
-}
-
 export function getHouseBySlug(slug: string): HouseCatalog | undefined {
-  const entries = fragrancesByHouse.get(slug);
-  const summary = houseSummaries.get(slug);
-  if (!entries || !summary) return undefined;
-  return { ...summary, fragrances: entries };
+  const row = get<HouseRow>("SELECT * FROM house WHERE slug = ?", slug);
+  if (!row) return undefined;
+  return {
+    ...toHouseSummary(row),
+    fragrances: selectFragrances(
+      `SELECT ${FRAGRANCE_COLUMNS} FROM fragrance f
+       WHERE f.house_slug = ?
+       ORDER BY f.votes DESC, f.rating DESC, f.name`,
+      slug,
+    ),
+  };
 }
 
-export function getAllHouseSummaries(): readonly HouseSummary[] {
-  return [...houseSummaries.values()].sort((a, b) =>
-    a.name.localeCompare(b.name),
-  );
+export function getAllHouseSummaries(): HouseSummary[] {
+  return all<HouseRow>("SELECT * FROM house ORDER BY name").map(toHouseSummary);
 }
 
+/**
+ * Substring search over "name house", ranked by how well the match lands on
+ * the name versus the house, then by popularity.
+ *
+ * The trigram index narrows ~100k rows to a few hundred candidates; the
+ * ranking itself stays in JS where the scoring rules are easy to read.
+ */
 export function searchCatalog(
-  query: string,
+  searchTerm: string,
   limit = 8,
 ): CatalogSearchResult[] {
-  const normalized = searchKey(query);
+  const normalized = searchKey(searchTerm);
   if (normalized.length < 2) return [];
   const terms = expandBrandSearchTerms(normalized.split(" "), searchKey);
+  if (terms.length === 0) return [];
   const expandedQuery = terms.join(" ");
 
-  return searchRecords
-    .map(({ fragrance, name, house, combined }) => {
+  const candidates = new Map<string, CatalogFragrance>();
+  for (const fragrance of findSearchCandidates(terms)) {
+    candidates.set(fragrance.id, fragrance);
+  }
+  // An exact name match must win even when it is too obscure to survive the
+  // popularity-ordered candidate cut above.
+  for (const fragrance of selectFragrances(
+    `SELECT ${FRAGRANCE_COLUMNS} FROM fragrance f WHERE f.name_key = ? LIMIT 20`,
+    normalized,
+  )) {
+    candidates.set(fragrance.id, fragrance);
+  }
+
+  return [...candidates.values()]
+    .map((fragrance) => {
+      const name = searchKey(fragrance.name);
+      const house = searchKey(fragrance.house);
+      const combined = `${name} ${house}`;
       if (!terms.every((term) => combined.includes(term))) return null;
 
       let score = 0;
@@ -250,10 +271,7 @@ export function searchCatalog(
       if (house === normalized || house === expandedQuery) score += 500;
       else if (house.startsWith(normalized) || house.startsWith(expandedQuery))
         score += 260;
-      if (
-        combined.startsWith(normalized) ||
-        combined.startsWith(expandedQuery)
-      ) {
+      if (combined.startsWith(normalized) || combined.startsWith(expandedQuery)) {
         score += 180;
       }
       score += Math.min(Math.log10((fragrance.votes ?? 0) + 1) * 30, 150);
@@ -262,9 +280,7 @@ export function searchCatalog(
       return { fragrance, score };
     })
     .filter(
-      (
-        result,
-      ): result is { fragrance: CatalogFragrance; score: number } =>
+      (result): result is { fragrance: CatalogFragrance; score: number } =>
         result !== null,
     )
     .sort(
@@ -274,41 +290,87 @@ export function searchCatalog(
         a.fragrance.name.localeCompare(b.fragrance.name),
     )
     .slice(0, Math.max(1, Math.min(limit, 20)))
-    .map(({ fragrance }) => ({
-      id: fragrance.id,
-      name: fragrance.name,
-      house: fragrance.house,
-      year: fragrance.year,
-      slug: fragrance.slug,
-      imageUrl: fragrance.imageUrl,
-    }));
+    .map(({ fragrance }) => toSearchResult(fragrance));
 }
 
+function findSearchCandidates(terms: string[]): CatalogFragrance[] {
+  // The trigram tokenizer needs at least three characters; shorter queries
+  // fall back to an indexed-free scan, which is rare and still sub-second.
+  const indexedTerm = [...terms]
+    .filter((term) => term.length >= 3)
+    .sort((a, b) => b.length - a.length)[0];
+  const filters = terms.filter((term) => term !== indexedTerm);
+  const conditions = filters
+    .map(() => "instr(f.name_key || ' ' || f.house_key, ?) > 0")
+    .join(" AND ");
+
+  if (indexedTerm) {
+    return selectFragrances(
+      `SELECT ${FRAGRANCE_COLUMNS} FROM fragrance f
+       WHERE f.rowid IN (SELECT rowid FROM fragrance_search WHERE fragrance_search MATCH ?)
+       ${conditions ? `AND ${conditions}` : ""}
+       ORDER BY f.votes DESC
+       LIMIT ${SEARCH_CANDIDATE_LIMIT}`,
+      `"${indexedTerm}"`,
+      ...filters,
+    );
+  }
+
+  return selectFragrances(
+    `SELECT ${FRAGRANCE_COLUMNS} FROM fragrance f
+     WHERE ${conditions || "1"}
+     ORDER BY f.votes DESC
+     LIMIT ${SEARCH_CANDIDATE_LIMIT}`,
+    ...filters,
+  );
+}
+
+/**
+ * Fragrances from the same house plus the most recognizable ones sharing a
+ * note or accord, re-ranked by full similarity.
+ */
 export function getRelatedFragrances(
   fragrance: CatalogFragrance,
   limit = 6,
 ): CatalogFragrance[] {
+  const termKeys = [
+    ...new Set([...fragrance.accords, ...allNotes(fragrance)].map(searchKey)),
+  ].filter(Boolean);
+
   const candidates = new Map<string, CatalogFragrance>();
-  for (const entry of fragrancesByHouse.get(fragrance.houseSlug) ?? []) {
+  for (const entry of selectFragrances(
+    `SELECT ${FRAGRANCE_COLUMNS} FROM fragrance f
+     WHERE f.house_slug = ?
+     ORDER BY f.votes DESC
+     LIMIT ${RELATED_CANDIDATE_LIMIT}`,
+    fragrance.houseSlug,
+  )) {
     candidates.set(entry.id, entry);
   }
-  for (const accord of fragrance.accords) {
-    for (const entry of accordIndex.get(searchKey(accord)) ?? []) {
-      candidates.set(entry.id, entry);
-    }
-  }
-  for (const note of allNotes(fragrance)) {
-    for (const entry of noteIndex.get(searchKey(note)) ?? []) {
+
+  if (termKeys.length > 0) {
+    const placeholders = termKeys.map(() => "?").join(",");
+    for (const entry of selectFragrances(
+      `SELECT ${FRAGRANCE_COLUMNS} FROM fragrance f
+       WHERE f.rowid IN (
+         SELECT ft.fragrance_rowid FROM fragrance_term ft
+         JOIN term t ON t.id = ft.term_id
+         WHERE t.term_key IN (${placeholders})
+       )
+       ORDER BY f.votes DESC
+       LIMIT ${RELATED_CANDIDATE_LIMIT}`,
+      ...termKeys,
+    )) {
       candidates.set(entry.id, entry);
     }
   }
   candidates.delete(fragrance.id);
 
   return [...candidates.values()]
-    .map((candidate) => {
-      const similarity = getCatalogSimilarity(fragrance, candidate);
-      return { candidate, score: similarity.rankScore };
-    })
+    .map((candidate) => ({
+      candidate,
+      score: getCatalogSimilarity(fragrance, candidate).rankScore,
+    }))
     .sort(
       (a, b) =>
         b.score - a.score ||
@@ -324,7 +386,6 @@ export function getCatalogSimilarity(
   second: CatalogFragrance,
 ): CatalogSimilarity {
   const similarity = scoreFragranceSimilarity(first, second);
-
   return {
     score: similarity.scentScore,
     rankScore: similarity.overallScore,
@@ -334,61 +395,149 @@ export function getCatalogSimilarity(
   };
 }
 
+/**
+ * Well-rated, reasonably known fragrances used as the recommendation universe.
+ * Memoized: the catalog is a build artifact, so it cannot change while the
+ * process is alive.
+ */
 let recommendationCandidates: CatalogFragrance[] | undefined;
 
 export function getRecommendationCandidates(
   limit = 2500,
 ): readonly CatalogFragrance[] {
-  recommendationCandidates ??= [...catalogFragrances]
-    .filter(
-      (fragrance) =>
-        fragrance.rating >= 3.6 &&
-        (fragrance.votes ?? 0) >= 25 &&
-        fragrance.accords.length > 0,
-    )
-    .sort(
-      (a, b) =>
-        Math.log10((b.votes ?? 0) + 1) * b.rating -
-          Math.log10((a.votes ?? 0) + 1) * a.rating ||
-        a.name.localeCompare(b.name),
-    )
-    .slice(0, 5000);
+  recommendationCandidates ??= selectFragrances(
+    `SELECT ${FRAGRANCE_COLUMNS} FROM fragrance f
+     WHERE f.rating >= 3.6 AND f.votes >= 25 AND f.accord_count > 0
+     ORDER BY f.popularity DESC, f.name
+     LIMIT ${RECOMMENDATION_CANDIDATE_LIMIT}`,
+  );
   return recommendationCandidates.slice(
     0,
     Math.max(1, Math.min(limit, recommendationCandidates.length)),
   );
 }
 
-export function getPopularFragranceSlugs(limit = 250): string[] {
-  return [...catalogFragrances]
-    .sort(
-      (a, b) =>
-        (b.votes ?? 0) - (a.votes ?? 0) ||
-        b.rating - a.rating ||
-        a.name.localeCompare(b.name),
-    )
-    .slice(0, limit)
-    .map((fragrance) => fragrance.slug);
+/**
+ * The recognizable slice of the catalog every game mode draws from. Bounded so
+ * pool building stays constant-cost as the catalog grows.
+ */
+let gamePool: CatalogFragrance[] | undefined;
+
+export function getGamePoolFragrances(): readonly CatalogFragrance[] {
+  gamePool ??= selectFragrances(
+    `SELECT ${FRAGRANCE_COLUMNS} FROM fragrance f
+     WHERE f.in_game_pool = 1
+     ORDER BY f.votes DESC, f.rating DESC, f.name
+     LIMIT ${GAME_POOL_LIMIT}`,
+  );
+  return gamePool;
 }
 
-export function getPopularCatalogFragrances(
-  limit = 9,
-): CatalogSearchResult[] {
-  const capped = Math.max(1, Math.min(limit, 24));
-  return [...catalogFragrances]
-    .sort(
-      (a, b) =>
-        (b.votes ?? 0) - (a.votes ?? 0) ||
-        b.rating - a.rating ||
-        a.name.localeCompare(b.name),
-    )
-    .slice(0, capped)
-    .map((fragrance) => ({
-      id: fragrance.id,
-      name: fragrance.name,
-      house: fragrance.house,
-      year: fragrance.year,
-      slug: fragrance.slug,
-      imageUrl: fragrance.imageUrl,
-    }));
+/**
+ * Scentle's answer pool: recognizable fragrances with enough note and accord
+ * detail for the similarity feedback to be meaningful.
+ */
+let scentlePool: CatalogFragrance[] | undefined;
+
+export function getScentleDailyPool(): readonly CatalogFragrance[] {
+  scentlePool ??= selectFragrances(
+    `SELECT ${FRAGRANCE_COLUMNS} FROM fragrance f
+     WHERE f.year > 0 AND f.rating > 0 AND f.votes >= 250
+       AND f.note_count >= 3 AND f.accord_count >= 2
+     ORDER BY f.votes DESC, f.rating DESC, f.id
+     LIMIT ${SCENTLE_POOL_LIMIT}`,
+  );
+  return scentlePool;
+}
+
+export interface PoolCriteria {
+  /** Only fragrances the community has actually rated. */
+  requiresRating?: boolean;
+  requiresPrice?: boolean;
+  requiresDescription?: boolean;
+  /** Enough accords or notes to reason about the scent profile. */
+  requiresProfile?: boolean;
+  /** Only bottles with an image the browser can actually load. */
+  requiresImage?: boolean;
+}
+
+/**
+ * Most-voted fragrances matching the given criteria. Game modes use this
+ * instead of filtering the catalog in memory, so the cost is proportional to
+ * the number of rounds rather than to the catalog size.
+ */
+export function getPoolCandidates(
+  criteria: PoolCriteria,
+  limit: number,
+): CatalogFragrance[] {
+  const conditions: string[] = [];
+  if (criteria.requiresRating) conditions.push("f.rating > 0");
+  if (criteria.requiresPrice) conditions.push("f.price > 0");
+  if (criteria.requiresDescription) conditions.push("length(f.description) > 0");
+  if (criteria.requiresProfile) {
+    conditions.push("(f.accord_count >= 2 OR f.note_count >= 3)");
+  }
+  if (criteria.requiresImage) {
+    // Fragella CDN hotlinks answer 403 in the browser, so they count as missing.
+    conditions.push(
+      "f.image_url IS NOT NULL AND instr(f.image_url, 'cdn.fragella.com') = 0",
+    );
+  }
+
+  return selectFragrances(
+    `SELECT ${FRAGRANCE_COLUMNS} FROM fragrance f
+     ${conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : ""}
+     ORDER BY f.votes DESC, f.rating DESC, f.name
+     LIMIT ?`,
+    Math.max(1, Math.floor(limit)),
+  );
+}
+
+/**
+ * Every fragrance with a price in the range the Price Ladder treats as
+ * dependable. Small enough (low thousands) to rank in memory.
+ */
+export function getPricedFragrances(): CatalogFragrance[] {
+  return selectFragrances(
+    `SELECT ${FRAGRANCE_COLUMNS} FROM fragrance f
+     WHERE f.price >= 25 AND f.price <= 600
+     ORDER BY f.votes DESC, f.rating DESC, f.name`,
+  );
+}
+
+/** Most-voted fragrances first. */
+export function getTopFragrances(limit: number): CatalogFragrance[] {
+  return selectFragrances(
+    `SELECT ${FRAGRANCE_COLUMNS} FROM fragrance f
+     ORDER BY f.votes DESC, f.rating DESC, f.name
+     LIMIT ?`,
+    Math.max(1, Math.floor(limit)),
+  );
+}
+
+export function getPopularFragranceSlugs(limit = 250): string[] {
+  return all<{ slug: string }>(
+    "SELECT slug FROM fragrance ORDER BY votes DESC, rating DESC, name LIMIT ?",
+    Math.max(1, Math.floor(limit)),
+  ).map((row) => row.slug);
+}
+
+export function getPopularCatalogFragrances(limit = 9): CatalogSearchResult[] {
+  return getTopFragrances(Math.max(1, Math.min(limit, 24))).map(toSearchResult);
+}
+
+/** Streams every slug so the sitemap never materializes the whole catalog. */
+export function* iterateFragranceSlugs(): Generator<string> {
+  for (const row of iterate<{ slug: string }>(
+    "SELECT slug FROM fragrance ORDER BY votes DESC",
+  )) {
+    yield row.slug;
+  }
+}
+
+export function getAccordNames(): string[] {
+  return all<{ term: string }>(
+    "SELECT term FROM term WHERE kind = ? ORDER BY term",
+    TERM_KIND.accord,
+  ).map((row) => row.term);
 }

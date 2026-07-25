@@ -292,15 +292,36 @@ function balancedShuffle(rounds: FakeOrRealRound[]): FakeOrRealRound[] {
   return shuffle(rounds);
 }
 
+export interface FakeOrRealOptions {
+  /**
+   * Returns the subset of the given names that a real fragrance already uses.
+   * Supply this when `catalog` is only a slice of the catalog, so an invented
+   * concept is never presented as fake while a real fragrance shares its name.
+   */
+  findExistingNames?: (names: readonly string[]) => Set<string>;
+}
+
 export function generateFakeOrRealRounds(
   catalog: readonly CatalogFragrance[],
   requestedRounds: number,
+  options: FakeOrRealOptions = {},
 ): FakeOrRealRound[] {
   const total = Math.max(2, Math.min(requestedRounds, 20));
-  const catalogNames = new Set(catalog.map((entry) => normalizedName(entry.name)));
-  const availableFakes = FAKE_CONCEPTS.filter(
-    (entry) => !catalogNames.has(normalizedName(entry.name)),
-  );
+  const availableFakes = options.findExistingNames
+    ? (() => {
+        const taken = options.findExistingNames!(
+          FAKE_CONCEPTS.map((entry) => entry.name),
+        );
+        return FAKE_CONCEPTS.filter((entry) => !taken.has(entry.name));
+      })()
+    : (() => {
+        const taken = new Set(
+          catalog.map((entry) => normalizedName(entry.name)),
+        );
+        return FAKE_CONCEPTS.filter(
+          (entry) => !taken.has(normalizedName(entry.name)),
+        );
+      })();
   const fakeCount = Math.min(Math.floor(total / 2), availableFakes.length);
   const realCount = total - fakeCount;
   const selectedFakes = sample(availableFakes, fakeCount);

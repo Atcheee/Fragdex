@@ -3,13 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "prebuild": "tsx scripts/generate-catalog-indexes.ts && tsx scripts/generate-fragrance-atlas.ts",
-    "generate:catalog-indexes": "tsx scripts/generate-catalog-indexes.ts",
+    "prebuild": "npm run generate:catalog && npm run generate:atlas",
+    "generate:catalog": "tsx scripts/build-catalog-db.ts",
     "generate:atlas": "tsx scripts/generate-fragrance-atlas.ts",
+    "predev": "node scripts/ensure-catalog-db.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "refresh:fragrantica": "tsx scripts/refresh-fragrantica.ts"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
@@ -22,11 +24,15 @@
     "next-themes": "^0.4.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "server-only": "^0.0.1",
     "sharp": "^0.34.5",
     "zustand": "^5.0.14"
   },
   "overrides": {
     "sharp": "$sharp"
+  },
+  "engines": {
+    "node": "24.x"
   },
   "browserslist": [
     "chrome 111",
@@ -36,7 +42,7 @@
   ],
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/node": "^24.13.3",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

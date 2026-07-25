@@ -36,9 +36,13 @@
 !/scripts/scrape-scentbase.ts
 !/scripts/dataset-utils.ts
 !/scripts/cutout-worker.mjs
-!/scripts/generate-catalog-indexes.ts
+!/scripts/build-catalog-db.ts
+!/scripts/ensure-catalog-db.mjs
 !/scripts/generate-fragrance-atlas.ts
 !/scripts/sync-fragrantica-cache.ts
+
+# compiled catalog — rebuilt from src/data/fragrances.json by `prebuild`
+/src/data/generated/
 
 # debug
 npm-debug.log*

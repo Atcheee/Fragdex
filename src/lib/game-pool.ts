@@ -2,8 +2,14 @@ import "server-only";
 
 import { CONNECTION_PUZZLES } from "@/data/connections-puzzles";
 import {
-  getAllCatalogFragrances,
+  findExistingNames,
+  getFragrancesByIds,
+  getGamePoolFragrances,
+  getPoolCandidates,
+  getPricedFragrances,
+  getTopFragrances,
   type CatalogFragrance,
+  type PoolCriteria,
 } from "@/lib/catalog";
 import {
   dailyConnectionPuzzle,
@@ -25,17 +31,15 @@ import { generateFakeOrRealRounds } from "@/lib/engines/fake-or-real";
 import { sample } from "@/lib/random";
 import type { GameStartResponse } from "@/lib/data-source";
 import type { Fragrance, GameKind, GameModeId } from "@/lib/types";
-import { allNotes } from "@/lib/types";
 
 /** Cap for client-side search catalogs (grid / pyramid / bottle / timeline). */
 export const PLAY_CATALOG_LIMIT = 3_000;
 
-const ELIGIBILITY: Partial<Record<GameModeId, (f: Fragrance) => boolean>> = {
-  "cost-more": (f) => f.price > 0,
-  "guess-description": (f) => f.description.length > 0,
-  "higher-rating": (f) => f.rating > 0,
-  "perfect-match": (f) =>
-    f.rating > 0 && (f.accords.length >= 2 || allNotes(f).length >= 3),
+const ELIGIBILITY: Partial<Record<GameModeId, PoolCriteria>> = {
+  "cost-more": { requiresPrice: true },
+  "guess-description": { requiresDescription: true },
+  "higher-rating": { requiresRating: true },
+  "perfect-match": { requiresRating: true, requiresProfile: true },
 };
 
 export interface PoolResult {
@@ -96,27 +100,34 @@ function slimForClient(f: Fragrance): Fragrance {
   return { ...next, description: "" };
 }
 
-function allSeedFragrances(): readonly CatalogFragrance[] {
-  return getAllCatalogFragrances();
-}
-
-export function getPopularFragrances(): Fragrance[] {
-  return allSeedFragrances().filter(
-    (f) => (f.votes ?? 0) >= 100 || f.price > 0,
-  );
+export function getPopularFragrances(): readonly Fragrance[] {
+  return getGamePoolFragrances();
 }
 
 /** Recognizable subset used for client search + local challenge generation. */
 export function getPlayCatalog(limit = PLAY_CATALOG_LIMIT): Fragrance[] {
-  return [...allSeedFragrances()]
-    .sort(
-      (a, b) =>
-        (b.votes ?? 0) - (a.votes ?? 0) ||
-        b.rating - a.rating ||
-        a.name.localeCompare(b.name),
-    )
-    .slice(0, Math.max(1, Math.min(limit, 8_000)))
-    .map(slimForClient);
+  return getTopFragrances(Math.max(1, Math.min(limit, 8_000))).map(slimForClient);
+}
+
+/**
+ * Curated Connections puzzles name specific fragrances, some of which are too
+ * obscure for the game pool, so those rows are fetched by id and merged in.
+ */
+function connectionsCatalog(): CatalogFragrance[] {
+  const puzzleIds = [
+    ...new Set(
+      CONNECTION_PUZZLES.flatMap((puzzle) =>
+        puzzle.groups.flatMap((group) => group.fragranceIds),
+      ),
+    ),
+  ];
+  const byId = new Map(
+    getFragrancesByIds(puzzleIds).map((fragrance) => [fragrance.id, fragrance]),
+  );
+  for (const fragrance of getGamePoolFragrances()) {
+    if (!byId.has(fragrance.id)) byId.set(fragrance.id, fragrance);
+  }
+  return [...byId.values()];
 }
 
 function cleanSearchName(name: string, house: string): string {
@@ -216,26 +227,28 @@ export async function getPoolForMode(
   // Fraganty pools are fetched client-side (user API key + relative URL).
   void _apiKey;
 
-  const seedFragrances = allSeedFragrances();
-  const eligible = seedFragrances.filter(ELIGIBILITY[mode] ?? (() => true));
-  const withImages = eligible.filter(hasUsableImage);
-  const preferred =
-    withImages.length >= Math.max(count * 2, 40) ? withImages : eligible;
+  const criteria = ELIGIBILITY[mode] ?? {};
+  const windowSize = mode === "perfect-match" ? count : Math.max(count * 8, 400);
 
-  if (mode === "perfect-match") {
-    const pool = [...preferred]
-      .sort((a, b) => (b.votes ?? 0) - (a.votes ?? 0))
-      .slice(0, Math.min(count, preferred.length))
-      .map(asFragrance);
-    return { pool, source: "seed" };
+  // Prefer bottles that render, but fall back to the unrestricted pool when
+  // too few of them match the mode.
+  let preferred = getPoolCandidates(
+    { ...criteria, requiresImage: true },
+    windowSize,
+  );
+  if (preferred.length < Math.max(count * 2, 40)) {
+    preferred = getPoolCandidates(criteria, windowSize);
   }
 
-  const window = [...preferred]
-    .sort((a, b) => (b.votes ?? 0) - (a.votes ?? 0))
-    .slice(0, Math.max(count * 8, 400));
-  const sampled = sample(window, Math.min(count, window.length));
-  const pool = await ensurePoolImages(sampled);
-  return { pool, source: "seed" };
+  if (mode === "perfect-match") {
+    return {
+      pool: preferred.slice(0, count).map(asFragrance),
+      source: "seed",
+    };
+  }
+
+  const sampled = sample(preferred, Math.min(count, preferred.length));
+  return { pool: await ensurePoolImages(sampled), source: "seed" };
 }
 
 export type GameStartRequest = {
@@ -262,12 +275,10 @@ export async function prepareGameStart(
     poolCount,
   } = request;
 
-  const catalog = allSeedFragrances();
-  const playCatalog = getPlayCatalog();
-
   if (kind === "connections") {
     const fallback = CONNECTION_PUZZLES[0];
     if (!fallback) throw new Error("No Connections puzzles are configured.");
+    const catalog = connectionsCatalog();
     const puzzle =
       connectionsVariant === "daily"
         ? dailyConnectionPuzzle(CONNECTION_PUZZLES, catalog)
@@ -276,6 +287,8 @@ export async function prepareGameStart(
           : randomConnectionPuzzle(CONNECTION_PUZZLES, catalog);
     return { source: "seed", pool: [], connectionsPuzzle: puzzle };
   }
+
+  const playCatalog = getPlayCatalog();
 
   if (kind === "fragrance-grid") {
     const seed =
@@ -296,7 +309,11 @@ export async function prepareGameStart(
       challengeVariant === "daily"
         ? dailyOddOneOutSeed(dateKey ?? new Date())
         : createOddOneOutPracticeSeed();
-    const oddOneOutRounds = generateOddOneOutRounds(catalog, rounds, { seed });
+    const oddOneOutRounds = generateOddOneOutRounds(
+      getGamePoolFragrances(),
+      rounds,
+      { seed },
+    );
     return {
       source: "seed",
       pool: [],
@@ -306,7 +323,7 @@ export async function prepareGameStart(
   }
 
   if (kind === "naming") {
-    const popular = getPopularFragrances();
+    const popular = [...getPopularFragrances()];
     const namingChallenge =
       modeId === "name-by-house"
         ? createHouseChallenge(popular)
@@ -318,7 +335,13 @@ export async function prepareGameStart(
     return {
       source: "seed",
       pool: [],
-      fakeOrRealRounds: generateFakeOrRealRounds(catalog, rounds),
+      fakeOrRealRounds: generateFakeOrRealRounds(
+        getGamePoolFragrances(),
+        rounds,
+        // The pool is only the recognizable slice, so invented concepts are
+        // checked for collisions against the whole catalog.
+        { findExistingNames },
+      ),
     };
   }
 
@@ -332,16 +355,12 @@ export async function prepareGameStart(
   }
 
   if (kind === "price-ladder") {
-    const priceCatalog = catalog
-      .filter(isReliablePriceCandidate)
-      .sort(
-        (a, b) =>
-          (b.votes ?? 0) - (a.votes ?? 0) ||
-          b.rating - a.rating ||
-          a.name.localeCompare(b.name),
-      )
-      .map(slimForClient);
-    return { source: "seed", pool: priceCatalog };
+    return {
+      source: "seed",
+      pool: getPricedFragrances()
+        .filter(isReliablePriceCandidate)
+        .map(slimForClient),
+    };
   }
 
   if (kind === "twenty-questions") {

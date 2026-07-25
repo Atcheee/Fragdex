@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Scraper working state: Chromium profiles and fetched pages, not source.
+    "scripts/fragrantica-cache/**",
+    "src/data/generated/**",
+    "tmp/**",
   ]),
 ]);
 

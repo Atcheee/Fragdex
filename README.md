@@ -29,9 +29,32 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+## Catalog pipeline
+
+`src/data/fragrances.json` is the editable source of truth — scrapers and importers read and write it, and it is the only file to back up. Nothing reads it at request time.
+
+At build time `scripts/build-catalog-db.ts` compiles it into a read-only SQLite database at `src/data/generated/catalog.db`, and that is what the app queries. This is why a 90k-entry catalog does not cost anything at startup: opening a SQLite file is O(1) and pages are read lazily, whereas the JSON had to be parsed in full before the first request could be served.
+
+```bash
+npm run generate:catalog   # rebuild catalog.db from fragrances.json
+```
+
+You rarely need to run it by hand. `prebuild` regenerates it, and `predev` regenerates it whenever `catalog.db` is missing or older than `fragrances.json` — so a fresh clone or a fresh scrape is picked up by the next `npm run dev`. If a dev server is already running when you scrape, restart it.
+
+What the build precomputes, and why:
+
+- **Interned note/accord terms.** Notes and accords become integer IDs in a `fragrance_term` link table, which is what keeps the database small enough to ship.
+- **A trigram full-text index** over "name house", so substring queries (`avent` → *Aventus*) are indexed rather than scanned.
+- **Per-year term rollups** (`term_year`, `year_total`), which collapse a million-row join ahead of time so the trend explorer answers from a few hundred rows.
+- **Denormalized counts** (`note_count`, `accord_count`, `popularity`) and covering indexes, so filtering and sorting never fault in the large text columns.
+
+`catalog.db` is generated, gitignored, and traced into the serverless bundle by `outputFileTracingIncludes` in `next.config.ts`; `fragrances.json` is explicitly excluded from it. The database currently occupies ~133MB of Vercel's 250MB unzipped function limit, so the catalog has room to roughly double. `npm run generate:catalog` warns when it gets close. Past that point, move the database to object storage and fetch it at runtime, or split the read paths onto a hosted Postgres/Turso instance.
+
+Query it through the helpers in `src/lib/catalog-db.ts` (`all`, `get`, `iterate`) rather than preparing statements directly — they return plain objects, and `node:sqlite` rows have a null prototype that React refuses to send to a Client Component.
+
 ## Data
 
-- **Built-in catalog** (default): ~8,700 fragrances across ~840 houses in `src/data/fragrances.json`:
+- **Built-in catalog** (default): ~91,600 fragrances across ~5,200 houses in `src/data/fragrances.json`:
   - ~150 hand-curated entries with approximate prices and descriptions (these power the price and description game modes).
   - ~8,500 entries built from the public [TidyTuesday Parfumo dataset](https://github.com/rfordatascience/tidytuesday/blob/main/data/2024/2024-12-10/readme.md) (community ratings, note pyramids, main accords, release years, vote counts). Only entries with ≥30 community votes, ≥3 notes and ≥2 accords are included. Ratings are converted from Parfumo's 0–10 scale to 0–5.
   - Regenerate/refresh with `npx tsx scripts/build-dataset.ts` (downloads the CSV on first run).
@@ -48,7 +71,7 @@ Open [http://localhost:3000](http://localhost:3000).
 - **The Scent Base scraper**: `npx tsx scripts/scrape-scentbase.ts --designers Afnan,Dior --merge` imports brand and perfume pages without using Fragrantica. `--popular --limit-designers 5 --merge` processes well-known houses first. Every perfume must load a real bottle image on both its brand listing and detail page before it can enter the cache or catalog; failed bottles are reported and skipped. Re-runs reuse `scripts/scentbase-cache/`. Add `--refresh` to recheck pages and images.
 - **Fraganty API** (optional): request a free key at api@fraganty.ai (docs: [fraganty.ai/api-docs](https://fraganty.ai/api-docs)) and paste it on the Settings page. Compatible modes (Higher Rating, Contains This Note, Has This Main Accord, Find Your Favorite) then draw random pools from Fraganty's 100k+ perfume database via a server-side proxy (`src/app/api/fraganty/pool/route.ts`), falling back to the built-in catalog on any error. Modes that need prices, descriptions or the full local catalog (naming games, house decoys) always use the built-in data.
 
-No database: game history, personal bests and the API key are persisted in `localStorage` (zustand `persist`).
+The catalog is read-only at runtime; game history, personal bests and the API key are persisted in `localStorage` (zustand `persist`), so there is still no server-side user state.
 
 Scentle answers are selected deterministically from a recognizable catalog subset using the UTC date. Guess scoring stays server-side so the answer is not included in the initial browser payload. Its normalized score weights notes (36%), accords (24%), year (14%), house (10%), rating (8%), and vote-count popularity (8%).
 
@@ -74,6 +97,8 @@ Light / dark / system (default: system) via `next-themes`, toggle in the header.
 
 - `src/lib/types.ts` — domain types
 - `src/lib/modes.ts` — game mode metadata
+- `src/lib/catalog-db.ts` — SQLite connection and row helpers
+- `src/lib/catalog.ts` — catalog lookups, search, related fragrances, game pools
 - `src/lib/data-source.ts` — seed + Fraganty pool providers
 - `src/lib/engines/` — pure round-generation logic per game family
 - `src/components/game/` — one component per game family + controller

@@ -1,9 +1,10 @@
 import "server-only";
 
+
 import { unstable_cache } from "next/cache";
+import { all, get, type SqlParameter } from "@/lib/catalog-db";
+import { searchKey } from "@/lib/catalog-schema";
 import { expandBrandSearchTerms } from "@/lib/brand-aliases";
-import houseSummaries from "@/data/generated/house-summaries.json";
-import browseMeta from "@/data/generated/browse-meta.json";
 
 export interface BrowseHouseSummary {
   slug: string;
@@ -22,89 +23,106 @@ export interface HouseBrowseResult {
   page: number;
 }
 
-const COLLATOR = new Intl.Collator("en", { sensitivity: "base", numeric: true });
-const houses = houseSummaries as BrowseHouseSummary[];
-const meta = browseMeta as {
-  fragranceCount: number;
-  houseCount: number;
-  generatedAt: string;
+interface HouseRow {
+  slug: string;
+  name: string;
+  fragrance_count: number;
+  average_rating: number;
+  first_year: number | null;
+  latest_year: number | null;
+  top_accords: string;
+}
+
+const SORT_ORDERS: Record<string, string> = {
+  size: "fragrance_count DESC, name COLLATE NOCASE",
+  name: "name COLLATE NOCASE",
+  rating: "average_rating DESC, fragrance_count DESC",
+  newest: "latest_year DESC, name COLLATE NOCASE",
 };
 
-function normalizeBrowseQuery(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim()
-    .replace(/\s+/g, " ");
+function toSummary(row: HouseRow): BrowseHouseSummary {
+  return {
+    slug: row.slug,
+    name: row.name,
+    fragranceCount: row.fragrance_count,
+    averageRating: row.average_rating,
+    firstYear: row.first_year,
+    latestYear: row.latest_year,
+    topAccords: JSON.parse(row.top_accords) as BrowseHouseSummary["topAccords"],
+  };
 }
 
 export function getBrowseMeta() {
-  return meta;
+  const rows = all<{ key: string; value: string }>("SELECT key, value FROM meta");
+  const meta = new Map(rows.map((row) => [row.key, row.value]));
+  return {
+    fragranceCount: Number(meta.get("fragranceCount") ?? 0),
+    houseCount: Number(meta.get("houseCount") ?? 0),
+    generatedAt: meta.get("generatedAt") ?? "",
+  };
 }
 
-export function getBrowseHouseSummaries(): readonly BrowseHouseSummary[] {
-  return houses;
+export function getBrowseHouseSummaries(): BrowseHouseSummary[] {
+  return all<HouseRow>("SELECT * FROM house ORDER BY name COLLATE NOCASE").map(
+    toSummary,
+  );
+}
+
+/** House names and their top accords are both searchable, as before. */
+function buildFilter(queryText: string): {
+  sql: string;
+  parameters: SqlParameter[];
+} {
+  const terms = expandBrandSearchTerms(
+    searchKey(queryText).split(" ").filter(Boolean),
+    searchKey,
+  );
+  if (terms.length === 0) return { sql: "", parameters: [] };
+
+  return {
+    sql: `WHERE ${terms.map(() => "instr(search_key, ?) > 0").join(" AND ")}`,
+    parameters: terms,
+  };
 }
 
 function browseHousesUncached(
-  query: string,
+  queryText: string,
   sort: string,
   page: number,
   pageSize: number,
 ): HouseBrowseResult {
-  const queryTerms = expandBrandSearchTerms(
-    normalizeBrowseQuery(query).split(" ").filter(Boolean),
-    normalizeBrowseQuery,
-  );
+  const { sql, parameters } = buildFilter(queryText);
+  const order = SORT_ORDERS[sort] ?? SORT_ORDERS.size!;
 
-  const filtered = houses.filter((house) => {
-    if (queryTerms.length === 0) return true;
-    const haystack = normalizeBrowseQuery(
-      `${house.name} ${house.topAccords.map((accord) => accord.name).join(" ")}`,
-    );
-    return queryTerms.every((term) => haystack.includes(term));
-  });
+  const total =
+    get<{ total: number }>(
+      `SELECT COUNT(*) AS total FROM house ${sql}`,
+      ...parameters,
+    )?.total ?? 0;
 
-  const sorted = [...filtered].sort((a, b) => {
-    if (sort === "name") return COLLATOR.compare(a.name, b.name);
-    if (sort === "rating") {
-      return (
-        b.averageRating - a.averageRating ||
-        b.fragranceCount - a.fragranceCount
-      );
-    }
-    if (sort === "newest") {
-      return (
-        (b.latestYear ?? 0) - (a.latestYear ?? 0) ||
-        COLLATOR.compare(a.name, b.name)
-      );
-    }
-    return (
-      b.fragranceCount - a.fragranceCount || COLLATOR.compare(a.name, b.name)
-    );
-  });
-
-  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.min(Math.max(1, page), totalPages);
-  const pageHouses = sorted.slice(
+  const rows = all<HouseRow>(
+    `SELECT * FROM house
+     ${sql}
+     ORDER BY ${order}
+     LIMIT ? OFFSET ?`,
+    ...parameters,
+    pageSize,
     (currentPage - 1) * pageSize,
-    currentPage * pageSize,
   );
 
   return {
-    total: sorted.length,
-    houses: pageHouses,
+    total,
+    houses: rows.map(toSummary),
     totalPages,
     page: currentPage,
   };
 }
 
 export const browseHouses = unstable_cache(
-  async (query: string, sort: string, page: number, pageSize: number) =>
-    browseHousesUncached(query, sort, page, pageSize),
-  // Bust when generate-catalog-indexes.ts rewrites browse-meta.json
-  ["browse-houses-v2", meta.generatedAt],
+  async (queryText: string, sort: string, page: number, pageSize: number) =>
+    browseHousesUncached(queryText, sort, page, pageSize),
+  ["browse-houses-v3", getBrowseMeta().generatedAt],
   { revalidate: 3600 },
 );

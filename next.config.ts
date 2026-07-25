@@ -30,6 +30,16 @@ const nextConfig: NextConfig = {
   // ONNX stays in scripts/cutout-worker.mjs (child process). Keep sharp
   // external so the API route's native binding stays intact.
   serverExternalPackages: ["sharp"],
+  // The catalog is read through node:sqlite at a runtime path, which the
+  // bundler cannot discover on its own, so it is traced in explicitly.
+  outputFileTracingIncludes: {
+    "/**": ["./src/data/generated/catalog.db"],
+  },
+  // fragrances.json is the build-time source for that database; nothing reads
+  // it at runtime and it would otherwise double the function size.
+  outputFileTracingExcludes: {
+    "/**": ["./src/data/fragrances.json"],
+  },
   images: {
     formats: ["image/avif", "image/webp"],
     remotePatterns: [

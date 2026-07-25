@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  buildTrendExplorerData,
+  getTrendExplorerData,
   normalizeTrendFilters,
 } from "@/lib/fragrance-trends";
 
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     minimumVotes: numberParam(params.get("votes")),
   });
 
-  return NextResponse.json(buildTrendExplorerData(filters), {
+  return NextResponse.json(await getTrendExplorerData(filters), {
     headers: {
       "Cache-Control": "public, max-age=60, s-maxage=3600",
     },
