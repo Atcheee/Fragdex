@@ -29,12 +29,6 @@ export function SiteHeader() {
           aria-label="Utility navigation"
           className="col-start-3 row-start-1 flex shrink-0 items-center gap-4 justify-self-end md:col-start-4"
         >
-          <Link
-            href="/settings"
-            className="text-sm text-muted transition-colors hover:text-foreground sm:text-base"
-          >
-            Settings
-          </Link>
           <ThemeToggle />
         </nav>
       </div>

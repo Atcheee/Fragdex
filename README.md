@@ -33,7 +33,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 `src/data/fragrances.json` is the editable source of truth — scrapers and importers read and write it, and it is the only file to back up. Nothing reads it at request time.
 
-At build time `scripts/build-catalog-db.ts` compiles it into a read-only SQLite database at `src/data/generated/catalog.db`, and that is what the app queries. This is why a 90k-entry catalog does not cost anything at startup: opening a SQLite file is O(1) and pages are read lazily, whereas the JSON had to be parsed in full before the first request could be served.
+At build time `scripts/build-catalog-db.ts` compiles it into a read-only SQLite database at `src/data/generated/catalog.db`, and that is what the app queries. This is why a ~136k-entry catalog does not cost anything at startup: opening a SQLite file is O(1) and pages are read lazily, whereas the JSON had to be parsed in full before the first request could be served.
 
 ```bash
 npm run generate:catalog   # rebuild catalog.db from fragrances.json
@@ -48,13 +48,13 @@ What the build precomputes, and why:
 - **Per-year term rollups** (`term_year`, `year_total`), which collapse a million-row join ahead of time so the trend explorer answers from a few hundred rows.
 - **Denormalized counts** (`note_count`, `accord_count`, `popularity`) and covering indexes, so filtering and sorting never fault in the large text columns.
 
-`catalog.db` is generated, gitignored, and traced into the serverless bundle by `outputFileTracingIncludes` in `next.config.ts`; `fragrances.json` is explicitly excluded from it. The database currently occupies ~133MB of Vercel's 250MB unzipped function limit, so the catalog has room to roughly double. `npm run generate:catalog` warns when it gets close. Past that point, move the database to object storage and fetch it at runtime, or split the read paths onto a hosted Postgres/Turso instance.
+`catalog.db` is generated, gitignored, and traced into the serverless bundle by `outputFileTracingIncludes` in `next.config.ts`; `fragrances.json` is explicitly excluded from it. The database currently occupies ~194MB of a ~240MB catalog budget (Vercel's 250MB unzipped function limit, less code and dependencies), so there is little headroom left. `npm run generate:catalog` warns when it gets close. Past that point, move the database to object storage and fetch it at runtime, or split the read paths onto a hosted Postgres/Turso instance.
 
 Query it through the helpers in `src/lib/catalog-db.ts` (`all`, `get`, `iterate`) rather than preparing statements directly — they return plain objects, and `node:sqlite` rows have a null prototype that React refuses to send to a Client Component.
 
 ## Data
 
-- **Built-in catalog** (default): ~91,600 fragrances across ~5,200 houses in `src/data/fragrances.json`:
+- **Built-in catalog** (default): ~135,800 fragrances across ~8,200 houses in `src/data/fragrances.json`:
   - ~150 hand-curated entries with approximate prices and descriptions (these power the price and description game modes).
   - ~8,500 entries built from the public [TidyTuesday Parfumo dataset](https://github.com/rfordatascience/tidytuesday/blob/main/data/2024/2024-12-10/readme.md) (community ratings, note pyramids, main accords, release years, vote counts). Only entries with ≥30 community votes, ≥3 notes and ≥2 accords are included. Ratings are converted from Parfumo's 0–10 scale to 0–5.
   - Regenerate/refresh with `npx tsx scripts/build-dataset.ts` (downloads the CSV on first run).
@@ -103,4 +103,4 @@ Light / dark / system (default: system) via `next-themes`, toggle in the header.
 - `src/lib/engines/` — pure round-generation logic per game family
 - `src/components/game/` — one component per game family + controller
 - `src/app/play/[mode]/` — setup and play screen for every mode
-- `src/app/settings/` — API key, personal bests, history
+- `src/lib/api-handlers/` — API logic shared by the catch-all `/api/[...path]` route (Hobby function limit)

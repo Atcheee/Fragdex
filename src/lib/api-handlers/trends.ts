@@ -4,8 +4,6 @@ import {
   normalizeTrendFilters,
 } from "@/lib/fragrance-trends";
 
-export const dynamic = "force-dynamic";
-
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
   const filters = normalizeTrendFilters({

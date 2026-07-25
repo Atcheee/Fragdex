@@ -2,7 +2,7 @@
  * Read-only handle on the compiled catalog (see scripts/build-catalog-db.ts).
  *
  * Opening a SQLite file is O(1) — pages are read lazily as queries touch them —
- * so importing this module costs nothing even though the catalog is >100MB.
+ * so importing this module costs nothing even though the catalog is ~194MB.
  * That is the whole point: the previous JSON catalog had to be parsed in full
  * before the first request could be served.
  */
