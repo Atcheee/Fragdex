@@ -1,5 +1,2 @@
-allowBuilds:
-  esbuild: true
-  onnxruntime-node: true
-  sharp: true
-  unrs-resolver: true
+packages:
+  - "."

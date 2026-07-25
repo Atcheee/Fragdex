@@ -31,9 +31,18 @@
   "overrides": {
     "sharp": "$sharp"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "onnxruntime-node",
+      "sharp",
+      "unrs-resolver"
+    ]
+  },
   "engines": {
     "node": "24.x"
   },
+  "packageManager": "pnpm@9.15.9",
   "browserslist": [
     "chrome 111",
     "edge 111",
