@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   ArrowRight,
   ArrowSquareOut,
@@ -25,11 +26,10 @@ import { useHydrated } from "@/lib/useHydrated";
 
 export function TastePassportDashboard({
   candidates,
-  sharedValue,
 }: {
   candidates: TasteFragrance[];
-  sharedValue?: string;
 }) {
+  const sharedValue = useSearchParams().get("share") ?? undefined;
   const hydrated = useHydrated();
   const localProfile = useAppStore((state) => state.tasteProfile);
   const events = useAppStore((state) => state.tasteEvents);

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { TastePassportDashboard } from "@/components/TastePassportDashboard";
 import { getPoolCandidates } from "@/lib/catalog";
 import { fragranceToTasteFragrance } from "@/lib/taste-passport";
@@ -10,24 +11,14 @@ export const metadata: Metadata = {
   alternates: { canonical: "/passport" },
 };
 
-type SearchParams = Promise<Record<string, string | string[] | undefined>>;
-
-export default async function TastePassportPage({
-  searchParams,
-}: {
-  searchParams: SearchParams;
-}) {
-  const params = await searchParams;
-  const sharedValue =
-    typeof params.share === "string" ? params.share : params.share?.[0];
+export default function TastePassportPage() {
   const candidates = getPoolCandidates({ requiresRating: true }, 180)
     .filter((fragrance) => fragrance.year > 0)
     .map(fragranceToTasteFragrance);
 
   return (
-    <TastePassportDashboard
-      candidates={candidates}
-      sharedValue={sharedValue}
-    />
+    <Suspense fallback={null}>
+      <TastePassportDashboard candidates={candidates} />
+    </Suspense>
   );
 }

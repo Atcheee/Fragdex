@@ -14,6 +14,9 @@ interface HousePageProps {
   params: Promise<{ slug: string }>;
 }
 
+// Every house is generated below; do not emit an unused fallback function.
+export const dynamicParams = false;
+
 export function generateStaticParams() {
   return getAllHouseSummaries().map((house) => ({ slug: house.slug }));
 }
