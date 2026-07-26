@@ -68,18 +68,20 @@ function toCard(row: CardRow): BrowseFragranceCard {
   };
 }
 
-export function getBrowseFragranceMeta() {
+export async function getBrowseFragranceMeta() {
   return getBrowseMeta();
 }
 
-export function getBrowseAccords(): readonly string[] {
+export async function getBrowseAccords(): Promise<readonly string[]> {
   return getAccordNames();
 }
 
-export function getFeaturedBrowseHouses(): ReadonlyArray<{
-  slug: string;
-  name: string;
-}> {
+export async function getFeaturedBrowseHouses(): Promise<
+  ReadonlyArray<{
+    slug: string;
+    name: string;
+  }>
+> {
   return all<{ slug: string; name: string }>(`
     SELECT slug, name FROM house
     ORDER BY fragrance_count DESC, name
@@ -136,26 +138,28 @@ function buildFilter(
   };
 }
 
-function browseFragrancesUncached(
+async function browseFragrancesUncached(
   queryText: string,
   house: string,
   accord: string,
   sort: string,
   page: number,
   pageSize: number,
-): FragranceBrowseResult {
+): Promise<FragranceBrowseResult> {
   const { sql, parameters } = buildFilter(queryText, house, accord);
   const order = SORT_ORDERS[sort] ?? SORT_ORDERS.popular!;
 
   const total =
-    get<{ total: number }>(
-      `SELECT COUNT(*) AS total FROM fragrance f ${sql}`,
-      ...parameters,
+    (
+      await get<{ total: number }>(
+        `SELECT COUNT(*) AS total FROM fragrance f ${sql}`,
+        ...parameters,
+      )
     )?.total ?? 0;
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.min(Math.max(1, page), totalPages);
-  const rows = all<CardRow>(
+  const rows = await all<CardRow>(
     `SELECT ${CARD_COLUMNS} FROM fragrance f
      ${sql}
      ORDER BY ${order}
@@ -182,7 +186,6 @@ export const browseFragrances = unstable_cache(
     page: number,
     pageSize: number,
   ) => browseFragrancesUncached(queryText, house, accord, sort, page, pageSize),
-  // generatedAt busts the cache whenever a new catalog is built.
-  ["browse-fragrances-v4", getBrowseMeta().generatedAt],
+  ["browse-fragrances-v5"],
   { revalidate: 3600 },
 );

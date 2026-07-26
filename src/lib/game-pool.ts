@@ -100,20 +100,24 @@ function slimForClient(f: Fragrance): Fragrance {
   return { ...next, description: "" };
 }
 
-export function getPopularFragrances(): readonly Fragrance[] {
+export async function getPopularFragrances(): Promise<readonly Fragrance[]> {
   return getGamePoolFragrances();
 }
 
 /** Recognizable subset used for client search + local challenge generation. */
-export function getPlayCatalog(limit = PLAY_CATALOG_LIMIT): Fragrance[] {
-  return getTopFragrances(Math.max(1, Math.min(limit, 8_000))).map(slimForClient);
+export async function getPlayCatalog(
+  limit = PLAY_CATALOG_LIMIT,
+): Promise<Fragrance[]> {
+  return (await getTopFragrances(Math.max(1, Math.min(limit, 8_000)))).map(
+    slimForClient,
+  );
 }
 
 /**
  * Curated Connections puzzles name specific fragrances, some of which are too
  * obscure for the game pool, so those rows are fetched by id and merged in.
  */
-function connectionsCatalog(): CatalogFragrance[] {
+async function connectionsCatalog(): Promise<CatalogFragrance[]> {
   const puzzleIds = [
     ...new Set(
       CONNECTION_PUZZLES.flatMap((puzzle) =>
@@ -122,9 +126,12 @@ function connectionsCatalog(): CatalogFragrance[] {
     ),
   ];
   const byId = new Map(
-    getFragrancesByIds(puzzleIds).map((fragrance) => [fragrance.id, fragrance]),
+    (await getFragrancesByIds(puzzleIds)).map((fragrance) => [
+      fragrance.id,
+      fragrance,
+    ]),
   );
-  for (const fragrance of getGamePoolFragrances()) {
+  for (const fragrance of await getGamePoolFragrances()) {
     if (!byId.has(fragrance.id)) byId.set(fragrance.id, fragrance);
   }
   return [...byId.values()];
@@ -232,12 +239,12 @@ export async function getPoolForMode(
 
   // Prefer bottles that render, but fall back to the unrestricted pool when
   // too few of them match the mode.
-  let preferred = getPoolCandidates(
+  let preferred = await getPoolCandidates(
     { ...criteria, requiresImage: true },
     windowSize,
   );
   if (preferred.length < Math.max(count * 2, 40)) {
-    preferred = getPoolCandidates(criteria, windowSize);
+    preferred = await getPoolCandidates(criteria, windowSize);
   }
 
   if (mode === "perfect-match") {
@@ -278,7 +285,7 @@ export async function prepareGameStart(
   if (kind === "connections") {
     const fallback = CONNECTION_PUZZLES[0];
     if (!fallback) throw new Error("No Connections puzzles are configured.");
-    const catalog = connectionsCatalog();
+    const catalog = await connectionsCatalog();
     const puzzle =
       connectionsVariant === "daily"
         ? dailyConnectionPuzzle(CONNECTION_PUZZLES, catalog)
@@ -288,7 +295,7 @@ export async function prepareGameStart(
     return { source: "seed", pool: [], connectionsPuzzle: puzzle };
   }
 
-  const playCatalog = getPlayCatalog();
+  const playCatalog = await getPlayCatalog();
 
   if (kind === "fragrance-grid") {
     const seed =
@@ -310,7 +317,7 @@ export async function prepareGameStart(
         ? dailyOddOneOutSeed(dateKey ?? new Date())
         : createOddOneOutPracticeSeed();
     const oddOneOutRounds = generateOddOneOutRounds(
-      getGamePoolFragrances(),
+      await getGamePoolFragrances(),
       rounds,
       { seed },
     );
@@ -323,7 +330,7 @@ export async function prepareGameStart(
   }
 
   if (kind === "naming") {
-    const popular = [...getPopularFragrances()];
+    const popular = [...(await getPopularFragrances())];
     const namingChallenge =
       modeId === "name-by-house"
         ? createHouseChallenge(popular)
@@ -335,8 +342,8 @@ export async function prepareGameStart(
     return {
       source: "seed",
       pool: [],
-      fakeOrRealRounds: generateFakeOrRealRounds(
-        getGamePoolFragrances(),
+      fakeOrRealRounds: await generateFakeOrRealRounds(
+        await getGamePoolFragrances(),
         rounds,
         // The pool is only the recognizable slice, so invented concepts are
         // checked for collisions against the whole catalog.
@@ -357,14 +364,14 @@ export async function prepareGameStart(
   if (kind === "price-ladder") {
     return {
       source: "seed",
-      pool: getPricedFragrances()
+      pool: (await getPricedFragrances())
         .filter(isReliablePriceCandidate)
         .map(slimForClient),
     };
   }
 
   if (kind === "twenty-questions") {
-    const questionsPool = getPlayCatalog(240);
+    const questionsPool = await getPlayCatalog(240);
     return {
       source: "seed",
       pool: sample(questionsPool, questionsPool.length),

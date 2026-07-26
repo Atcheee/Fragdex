@@ -20,54 +20,72 @@ export interface FragranceFamily
   members: FragranceFamilyMember[];
 }
 
-function resolveFamily(
+async function resolveFamily(
   definition: FragranceFamilyDefinition,
-): FragranceFamily {
-  const members = definition.members
-    .map((member) => {
-      const fragrance = getFragranceById(member.fragranceId);
-      if (!fragrance) {
-        throw new Error(
-          `Curated family "${definition.slug}" references missing fragrance "${member.fragranceId}".`,
-        );
-      }
-      return { ...member, fragrance };
-    })
-    .sort(
-      (a, b) =>
-        a.fragrance.year - b.fragrance.year ||
-        a.fragrance.name.localeCompare(b.fragrance.name),
-    );
+): Promise<FragranceFamily> {
+  const members = (
+    await Promise.all(
+      definition.members.map(async (member) => {
+        const fragrance = await getFragranceById(member.fragranceId);
+        if (!fragrance) {
+          throw new Error(
+            `Curated family "${definition.slug}" references missing fragrance "${member.fragranceId}".`,
+          );
+        }
+        return { ...member, fragrance };
+      }),
+    )
+  ).sort(
+    (a, b) =>
+      a.fragrance.year - b.fragrance.year ||
+      a.fragrance.name.localeCompare(b.fragrance.name),
+  );
 
   return { ...definition, members };
 }
 
-const families = fragranceFamilyDefinitions.map(resolveFamily);
-const familyBySlug = new Map(families.map((family) => [family.slug, family]));
-const familyByFragranceId = new Map<string, FragranceFamily>();
+let familiesPromise: Promise<FragranceFamily[]> | undefined;
+let familyBySlug: Map<string, FragranceFamily> | undefined;
+let familyByFragranceId: Map<string, FragranceFamily> | undefined;
 
-for (const family of families) {
-  for (const member of family.members) {
-    familyByFragranceId.set(member.fragranceId, family);
+async function loadFamilies(): Promise<FragranceFamily[]> {
+  if (!familiesPromise) {
+    familiesPromise = Promise.all(
+      fragranceFamilyDefinitions.map(resolveFamily),
+    ).then((families) => {
+      familyBySlug = new Map(families.map((family) => [family.slug, family]));
+      familyByFragranceId = new Map();
+      for (const family of families) {
+        for (const member of family.members) {
+          familyByFragranceId.set(member.fragranceId, family);
+        }
+      }
+      return families;
+    });
   }
+  return familiesPromise;
 }
 
-export function getAllFragranceFamilies(): readonly FragranceFamily[] {
-  return families;
+export async function getAllFragranceFamilies(): Promise<
+  readonly FragranceFamily[]
+> {
+  return loadFamilies();
 }
 
-export function getFragranceFamilyBySlug(
+export async function getFragranceFamilyBySlug(
   slug: string,
-): FragranceFamily | undefined {
-  return familyBySlug.get(slug);
+): Promise<FragranceFamily | undefined> {
+  await loadFamilies();
+  return familyBySlug!.get(slug);
 }
 
-export function getFragranceFamilyForFragrance(
+export async function getFragranceFamilyForFragrance(
   fragranceId: string,
-): FragranceFamily | undefined {
-  return familyByFragranceId.get(fragranceId);
+): Promise<FragranceFamily | undefined> {
+  await loadFamilies();
+  return familyByFragranceId!.get(fragranceId);
 }
 
 export function getFragranceFamilySlugs(): string[] {
-  return families.map((family) => family.slug);
+  return fragranceFamilyDefinitions.map((family) => family.slug);
 }

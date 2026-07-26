@@ -175,11 +175,11 @@ const noteChoices = unique([
   count: index < POPULAR_NOTES.length ? POPULAR_NOTES.length - index : 0,
 }));
 
-function buildEvidence() {
+async function buildEvidence() {
   if (accordEvidence && preparedCandidates) return;
 
   accordEvidence = new Map();
-  const candidates = getRecommendationCandidates(5000);
+  const candidates = await getRecommendationCandidates(5000);
 
   for (const fragrance of candidates) {
     for (const note of new Set(allNotes(fragrance))) {
@@ -202,13 +202,13 @@ function buildEvidence() {
   }));
 }
 
-function inferredAccords(
+async function inferredAccords(
   fragrance: Pick<
     CatalogFragrance,
     "topNotes" | "heartNotes" | "baseNotes" | "accords"
   >,
-): string[] {
-  buildEvidence();
+): Promise<string[]> {
+  await buildEvidence();
   const scores = new Map<string, number>();
   const addNotes = (notes: string[], tier: NoteTier) => {
     for (const note of notes) {
@@ -284,10 +284,10 @@ function cosineSimilarity(left: SparseVector, right: SparseVector): number {
   return dot / Math.sqrt(leftMagnitude * rightMagnitude);
 }
 
-function applyEdit(
+async function applyEdit(
   original: CatalogFragrance,
   edit: SwapNoteEdit,
-): CatalogFragrance {
+): Promise<CatalogFragrance> {
   const modified: CatalogFragrance = {
     ...original,
     topNotes: [...original.topNotes],
@@ -336,7 +336,7 @@ function applyEdit(
     }
   }
 
-  modified.accords = inferredAccords(modified);
+  modified.accords = await inferredAccords(modified);
   return modified;
 }
 
@@ -389,8 +389,10 @@ function makeExplanation(
   return `${fragrance.name} is ${parts.join("; ")}.`;
 }
 
-export function getSwapNoteFragrance(id: string): SwapNoteFragrance | null {
-  const fragrance = getFragranceById(id);
+export async function getSwapNoteFragrance(
+  id: string,
+): Promise<SwapNoteFragrance | null> {
+  const fragrance = await getFragranceById(id);
   return fragrance ? toSwapFragrance(fragrance) : null;
 }
 
@@ -409,15 +411,15 @@ export function searchSwapNotes(query: string, limit = 18): string[] {
     .map((choice) => choice.name);
 }
 
-export function matchSwapNote(
+export async function matchSwapNote(
   fragranceId: string,
   edit: SwapNoteEdit,
   limit = 6,
-): SwapNoteMatchResponse {
-  buildEvidence();
-  const original = getFragranceById(fragranceId);
+): Promise<SwapNoteMatchResponse> {
+  await buildEvidence();
+  const original = await getFragranceById(fragranceId);
   if (!original) throw new Error("Fragrance not found.");
-  const modified = applyEdit(original, edit);
+  const modified = await applyEdit(original, edit);
   const modifiedVector = vectorFor(modified);
   const originalVector = vectorFor(original);
   const originalNotes = allNotes(original);

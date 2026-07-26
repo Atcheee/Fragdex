@@ -14,12 +14,15 @@ export const metadata: Metadata = {
 };
 
 export default async function TrendsPage() {
-  const initialData = await getTrendExplorerData(defaultTrendFilters);
+  const [initialData, featuredHouses] = await Promise.all([
+    getTrendExplorerData(defaultTrendFilters),
+    getFeaturedBrowseHouses(),
+  ]);
 
   return (
     <FragranceTrendExplorer
       initialData={initialData}
-      houses={[...getFeaturedBrowseHouses()]}
+      houses={[...featuredHouses]}
     />
   );
 }

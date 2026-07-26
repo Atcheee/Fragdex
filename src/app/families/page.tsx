@@ -15,8 +15,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/families" },
 };
 
-export default function FragranceFamiliesPage() {
-  const families = getAllFragranceFamilies();
+export default async function FragranceFamiliesPage() {
+  const families = await getAllFragranceFamilies();
 
   return (
     <div className="flex flex-col gap-8 pb-8">

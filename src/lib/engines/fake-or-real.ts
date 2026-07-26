@@ -298,18 +298,20 @@ export interface FakeOrRealOptions {
    * Supply this when `catalog` is only a slice of the catalog, so an invented
    * concept is never presented as fake while a real fragrance shares its name.
    */
-  findExistingNames?: (names: readonly string[]) => Set<string>;
+  findExistingNames?: (
+    names: readonly string[],
+  ) => Set<string> | Promise<Set<string>>;
 }
 
-export function generateFakeOrRealRounds(
+export async function generateFakeOrRealRounds(
   catalog: readonly CatalogFragrance[],
   requestedRounds: number,
   options: FakeOrRealOptions = {},
-): FakeOrRealRound[] {
+): Promise<FakeOrRealRound[]> {
   const total = Math.max(2, Math.min(requestedRounds, 20));
   const availableFakes = options.findExistingNames
-    ? (() => {
-        const taken = options.findExistingNames!(
+    ? await (async () => {
+        const taken = await options.findExistingNames!(
           FAKE_CONCEPTS.map((entry) => entry.name),
         );
         return FAKE_CONCEPTS.filter((entry) => !taken.has(entry.name));

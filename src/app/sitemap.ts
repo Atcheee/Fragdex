@@ -6,7 +6,7 @@ const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ??
   "https://this-or-that-fragrance-games.vercel.app";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const lastModified = new Date();
   const staticRoutes: MetadataRoute.Sitemap = [
     {
@@ -36,7 +36,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   ];
 
   const fragranceRoutes: MetadataRoute.Sitemap = [];
-  for (const slug of iterateFragranceSlugs()) {
+  for await (const slug of iterateFragranceSlugs()) {
     fragranceRoutes.push({
       url: `${siteUrl}/fragrance/${slug}`,
       lastModified,
@@ -52,14 +52,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.8,
   }));
 
-  const houseRoutes: MetadataRoute.Sitemap = getAllHouseSummaries().map(
-    (house) => ({
-      url: `${siteUrl}/house/${house.slug}`,
-      lastModified,
-      changeFrequency: "weekly",
-      priority: 0.7,
-    }),
-  );
+  const houseRoutes: MetadataRoute.Sitemap = (
+    await getAllHouseSummaries()
+  ).map((house) => ({
+    url: `${siteUrl}/house/${house.slug}`,
+    lastModified,
+    changeFrequency: "weekly",
+    priority: 0.7,
+  }));
 
   return [...staticRoutes, ...gameRoutes, ...houseRoutes, ...fragranceRoutes];
 }

@@ -1,83 +1,84 @@
 /**
- * Read-only handle on the compiled catalog (see scripts/build-catalog-db.ts).
- *
- * Opening a SQLite file is O(1) — pages are read lazily as queries touch them —
- * so importing this module costs nothing even though the catalog is ~194MB.
- * That is the whole point: the previous JSON catalog had to be parsed in full
- * before the first request could be served.
+ * Read-only handle on the Turso-hosted catalog (seeded from
+ * scripts/build-catalog-db.ts via scripts/push-catalog-to-turso.ts).
  */
 import "server-only";
 
-import { DatabaseSync, type StatementSync } from "node:sqlite";
-import path from "node:path";
-import { CATALOG_DB_FILENAME } from "@/lib/catalog-schema";
+import { createClient, type Client, type InValue } from "@libsql/client";
 
 /** What may be bound to a `?` placeholder. */
-export type SqlParameter = null | number | bigint | string;
+export type SqlParameter = null | number | bigint | string | boolean;
 
-let database: DatabaseSync | undefined;
-const statements = new Map<string, StatementSync>();
+let client: Client | undefined;
 
-function databasePath(): string {
-  // process.cwd() is the project root during `next dev`/`next build` and the
-  // function root at runtime; next.config.ts traces the file into both.
-  return path.join(process.cwd(), "src/data/generated", CATALOG_DB_FILENAME);
-}
-
-export function catalogDatabase(): DatabaseSync {
-  if (database) return database;
-  const file = databasePath();
-  try {
-    database = new DatabaseSync(file, { readOnly: true });
-  } catch (cause) {
+function catalogClient(): Client {
+  if (client) return client;
+  const url = process.env.TURSO_DATABASE_URL;
+  const authToken = process.env.TURSO_AUTH_TOKEN;
+  if (!url || !authToken) {
     throw new Error(
-      `Could not open the catalog database at ${file}. ` +
-        "Run `npm run generate:catalog` to build it from src/data/fragrances.json.",
-      { cause },
+      "Turso catalog is not configured. Set TURSO_DATABASE_URL and TURSO_AUTH_TOKEN " +
+        "(e.g. in .env.local). Seed with `npm run push:catalog` after generating the local DB.",
     );
   }
-  return database;
+  client = createClient({ url, authToken });
+  return client;
 }
 
-/** Prepared statements are cached because SQL text is fixed per call site. */
-function query(sql: string): StatementSync {
-  const cached = statements.get(sql);
-  if (cached) return cached;
-  const statement = catalogDatabase().prepare(sql);
-  statements.set(sql, statement);
-  return statement;
+function toArgs(parameters: SqlParameter[]): InValue[] {
+  return parameters as InValue[];
+}
+
+function rowObject<Row>(row: Record<string, unknown>): Row {
+  return { ...row } as Row;
+}
+
+/** Run a query and return its rows as plain objects. */
+export async function all<Row>(
+  sql: string,
+  ...parameters: SqlParameter[]
+): Promise<Row[]> {
+  const result = await catalogClient().execute({
+    sql,
+    args: toArgs(parameters),
+  });
+  return result.rows.map((row) => rowObject<Row>(row as unknown as Record<string, unknown>));
+}
+
+export async function get<Row>(
+  sql: string,
+  ...parameters: SqlParameter[]
+): Promise<Row | undefined> {
+  const rows = await all<Row>(sql, ...parameters);
+  return rows[0];
 }
 
 /**
- * Run a query and return its rows.
- *
- * The copy is not incidental: node:sqlite hands back objects with a null
- * prototype, and React refuses to serialize those across the Server/Client
- * Component boundary. Normalizing here means a row is safe to pass anywhere,
- * rather than every new query being one prop drill away from a build failure.
+ * Page through a large result set without loading every row at once.
+ * Used by the sitemap.
  */
-export function all<Row>(sql: string, ...parameters: SqlParameter[]): Row[] {
-  return query(sql)
-    .all(...parameters)
-    .map((row) => ({ ...row }) as Row);
-}
-
-export function get<Row>(
+export async function* iterate<Row>(
   sql: string,
   ...parameters: SqlParameter[]
-): Row | undefined {
-  const row = query(sql).get(...parameters);
-  return row === undefined ? undefined : ({ ...row } as Row);
+): AsyncGenerator<Row> {
+  const pageSize = 2_000;
+  let offset = 0;
+  for (;;) {
+    const page = await all<Row>(
+      `${sql} LIMIT ? OFFSET ?`,
+      ...parameters,
+      pageSize,
+      offset,
+    );
+    if (page.length === 0) return;
+    for (const row of page) yield row;
+    if (page.length < pageSize) return;
+    offset += pageSize;
+  }
 }
 
-/** Row-at-a-time variant, for result sets too large to hold in memory. */
-export function* iterate<Row>(
-  sql: string,
-  ...parameters: SqlParameter[]
-): Generator<Row> {
-  for (const row of query(sql).iterate(...parameters)) yield { ...row } as Row;
-}
-
-export function metaValue(key: string): string | undefined {
-  return get<{ value: string }>("SELECT value FROM meta WHERE key = ?", key)?.value;
+export async function metaValue(key: string): Promise<string | undefined> {
+  return (
+    await get<{ value: string }>("SELECT value FROM meta WHERE key = ?", key)
+  )?.value;
 }

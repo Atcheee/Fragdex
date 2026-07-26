@@ -11,8 +11,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/passport" },
 };
 
-export default function TastePassportPage() {
-  const candidates = getPoolCandidates({ requiresRating: true }, 180)
+export default async function TastePassportPage() {
+  const candidates = (await getPoolCandidates({ requiresRating: true }, 180))
     .filter((fragrance) => fragrance.year > 0)
     .map(fragranceToTasteFragrance);
 

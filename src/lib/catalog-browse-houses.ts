@@ -52,8 +52,10 @@ function toSummary(row: HouseRow): BrowseHouseSummary {
   };
 }
 
-export function getBrowseMeta() {
-  const rows = all<{ key: string; value: string }>("SELECT key, value FROM meta");
+export async function getBrowseMeta() {
+  const rows = await all<{ key: string; value: string }>(
+    "SELECT key, value FROM meta",
+  );
   const meta = new Map(rows.map((row) => [row.key, row.value]));
   return {
     fragranceCount: Number(meta.get("fragranceCount") ?? 0),
@@ -62,10 +64,10 @@ export function getBrowseMeta() {
   };
 }
 
-export function getBrowseHouseSummaries(): BrowseHouseSummary[] {
-  return all<HouseRow>("SELECT * FROM house ORDER BY name COLLATE NOCASE").map(
-    toSummary,
-  );
+export async function getBrowseHouseSummaries(): Promise<BrowseHouseSummary[]> {
+  return (
+    await all<HouseRow>("SELECT * FROM house ORDER BY name COLLATE NOCASE")
+  ).map(toSummary);
 }
 
 /** House names and their top accords are both searchable, as before. */
@@ -85,24 +87,26 @@ function buildFilter(queryText: string): {
   };
 }
 
-function browseHousesUncached(
+async function browseHousesUncached(
   queryText: string,
   sort: string,
   page: number,
   pageSize: number,
-): HouseBrowseResult {
+): Promise<HouseBrowseResult> {
   const { sql, parameters } = buildFilter(queryText);
   const order = SORT_ORDERS[sort] ?? SORT_ORDERS.size!;
 
   const total =
-    get<{ total: number }>(
-      `SELECT COUNT(*) AS total FROM house ${sql}`,
-      ...parameters,
+    (
+      await get<{ total: number }>(
+        `SELECT COUNT(*) AS total FROM house ${sql}`,
+        ...parameters,
+      )
     )?.total ?? 0;
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.min(Math.max(1, page), totalPages);
-  const rows = all<HouseRow>(
+  const rows = await all<HouseRow>(
     `SELECT * FROM house
      ${sql}
      ORDER BY ${order}
@@ -123,6 +127,6 @@ function browseHousesUncached(
 export const browseHouses = unstable_cache(
   async (queryText: string, sort: string, page: number, pageSize: number) =>
     browseHousesUncached(queryText, sort, page, pageSize),
-  ["browse-houses-v3", getBrowseMeta().generatedAt],
+  ["browse-houses-v5"],
   { revalidate: 3600 },
 );

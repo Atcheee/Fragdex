@@ -7,25 +7,26 @@ import {
   getBrowseMeta,
 } from "@/lib/catalog-browse-houses";
 
-const browseMeta = getBrowseMeta();
-
-export const metadata: Metadata = {
-  title: "Designer houses — This or That",
-  description: `Explore ${browseMeta.houseCount.toLocaleString("en-US")} fragrance designer houses and browse their collections, signature accords, ratings, and release years.`,
-  alternates: { canonical: "/houses" },
-};
-
 export const revalidate = 3600;
 
 const PAGE_SIZE = 24;
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+export async function generateMetadata(): Promise<Metadata> {
+  const browseMeta = await getBrowseMeta();
+  return {
+    title: "Designer houses — This or That",
+    description: `Explore ${browseMeta.houseCount.toLocaleString("en-US")} fragrance designer houses and browse their collections, signature accords, ratings, and release years.`,
+    alternates: { canonical: "/houses" },
+  };
+}
 
 export default async function HousesPage({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams;
   const query = getParam(params, "q").trim();
   const sort = getParam(params, "sort") || "collection";
   const page = positiveInteger(getParam(params, "page"));
-  const meta = getBrowseMeta();
+  const meta = await getBrowseMeta();
   const result = await browseHouses(query, sort, page, PAGE_SIZE);
 
   return (

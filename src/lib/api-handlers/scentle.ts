@@ -27,7 +27,7 @@ export async function POST(request: Request) {
       dateKey,
       maxGuesses: SCENTLE_MAX_GUESSES,
       outcome: "lost",
-      answer: getScentleAnswerSummary(),
+      answer: await getScentleAnswerSummary(),
     };
     return NextResponse.json(response, {
       headers: { "Cache-Control": "no-store" },
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const feedback = scoreScentleGuess(body.guessId);
+  const feedback = await scoreScentleGuess(body.guessId);
   if (!feedback) {
     return NextResponse.json({ error: "Fragrance not found" }, { status: 404 });
   }
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
     maxGuesses: SCENTLE_MAX_GUESSES,
     feedback,
     outcome,
-    ...(outcome ? { answer: getScentleAnswerSummary() } : {}),
+    ...(outcome ? { answer: await getScentleAnswerSummary() } : {}),
   };
 
   return NextResponse.json(response, {

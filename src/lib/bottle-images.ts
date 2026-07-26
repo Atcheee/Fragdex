@@ -1,9 +1,14 @@
+import { isVercelBlobUrl } from "@/lib/blob-url";
+
 /** Resolve ordered bottle image URLs for a catalog imageUrl. */
 export function bottleCandidates(
   imageUrl: string | undefined,
   options: { preferOpaque?: boolean } = {},
 ): string[] {
   if (!imageUrl || imageUrl.includes("cdn.fragella.com")) return [];
+
+  // Owned Blob URLs win — no CDN fallback needed when the store has the bottle.
+  if (isVercelBlobUrl(imageUrl)) return [imageUrl];
 
   const preferOpaque = options.preferOpaque ?? true;
   const fragantyId =

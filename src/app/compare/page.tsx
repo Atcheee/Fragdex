@@ -37,8 +37,10 @@ export default async function ComparePage({
   searchParams: SearchParams;
 }) {
   const params = await searchParams;
-  const first = getFragrance(getParam(params, "first"));
-  const second = getFragrance(getParam(params, "second"));
+  const [first, second] = await Promise.all([
+    getFragrance(getParam(params, "first")),
+    getFragrance(getParam(params, "second")),
+  ]);
   const canCompare = first && second && first.id !== second.id;
   const similarity = canCompare
     ? scoreFragranceSimilarity(first, second)
@@ -712,7 +714,9 @@ function pluralize(noun: string, count: number): string {
   return count === 1 ? noun : `${noun}s`;
 }
 
-function getFragrance(slug: string): CatalogFragrance | undefined {
+async function getFragrance(
+  slug: string,
+): Promise<CatalogFragrance | undefined> {
   return slug ? getFragranceBySlug(slug) : undefined;
 }
 

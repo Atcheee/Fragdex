@@ -32,7 +32,7 @@ export async function generateMetadata({
   params,
 }: FamilyPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const family = getFragranceFamilyBySlug(slug);
+  const family = await getFragranceFamilyBySlug(slug);
   if (!family) return { title: "Fragrance family not found" };
 
   return {
@@ -47,7 +47,7 @@ export default async function FragranceFamilyPage({
   searchParams,
 }: FamilyPageProps) {
   const [{ slug }, query] = await Promise.all([params, searchParams]);
-  const family = getFragranceFamilyBySlug(slug);
+  const family = await getFragranceFamilyBySlug(slug);
   if (!family) notFound();
 
   const original = family.members[0]!;

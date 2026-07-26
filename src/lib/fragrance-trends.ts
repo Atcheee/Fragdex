@@ -2,7 +2,7 @@ import "server-only";
 
 
 import { unstable_cache } from "next/cache";
-import { all, metaValue, type SqlParameter } from "@/lib/catalog-db";
+import { all, type SqlParameter } from "@/lib/catalog-db";
 import { TERM_KIND, searchKey, type TermKind } from "@/lib/catalog-schema";
 import type {
   TrendChart,
@@ -96,17 +96,21 @@ export function normalizeTrendFilters(
   };
 }
 
-export function buildTrendExplorerData(
+export async function buildTrendExplorerData(
   requestedFilters: Partial<TrendFilters> = {},
-): TrendExplorerData {
+): Promise<TrendExplorerData> {
   const filters = normalizeTrendFilters(requestedFilters);
 
   const periodLength = filters.endYear - filters.startYear + 1;
   const previousEnd = filters.startYear - 1;
   const previousStart = previousEnd - periodLength + 1;
 
-  const current = summarizePeriod(filters, filters.startYear, filters.endYear);
-  const previous = summarizePeriod(filters, previousStart, previousEnd);
+  const current = await summarizePeriod(
+    filters,
+    filters.startYear,
+    filters.endYear,
+  );
+  const previous = await summarizePeriod(filters, previousStart, previousEnd);
 
   const bins = createBins(filters.startYear, filters.endYear);
 
@@ -115,13 +119,13 @@ export function buildTrendExplorerData(
     availableYears: { minimum: MINIMUM_YEAR, maximum: MAXIMUM_YEAR },
     current: current.summary,
     previous: previous.summary,
-    noteChart: buildChart(
+    noteChart: await buildChart(
       filters,
       bins,
       TERM_KIND.note,
       current.summary.topNotes.slice(0, CHART_SERIES_COUNT),
     ),
-    accordChart: buildChart(
+    accordChart: await buildChart(
       filters,
       bins,
       TERM_KIND.accord,
@@ -129,8 +133,8 @@ export function buildTrendExplorerData(
     ),
     rising: buildMovers(current.accords, previous.accords, "rising"),
     declining: buildMovers(current.accords, previous.accords, "declining"),
-    eras: buildEras(filters),
-    representatives: buildRepresentatives(
+    eras: await buildEras(filters),
+    representatives: await buildRepresentatives(
       filters,
       current.summary.topAccords,
     ),
@@ -144,7 +148,7 @@ export function buildTrendExplorerData(
  */
 export const getTrendExplorerData = unstable_cache(
   async (filters: TrendFilters) => buildTrendExplorerData(filters),
-  ["trend-explorer-v1", metaValue("generatedAt") ?? ""],
+  ["trend-explorer-v2"],
   { revalidate: 3600 },
 );
 
@@ -201,15 +205,15 @@ function liveConditions(filters: TrendFilters): {
  * Term counts per bin. One query regardless of how many bins are requested,
  * because the bin index is computed in SQL.
  */
-function aggregateTerms(
+async function aggregateTerms(
   filters: TrendFilters,
   kind: TermKind,
   binning: Binning,
-): Map<number, BinCounts> {
+): Promise<Map<number, BinCounts>> {
   const { startYear, endYear, size } = binning;
   const { sql, parameters } = liveConditions(filters);
   const rows = usesRollup(filters)
-    ? all<TermRow>(
+    ? await all<TermRow>(
         `SELECT ${binIndex("ty.year")} AS bin, t.term_key AS term_key, t.term AS term,
                 SUM(ty.count) AS count
          FROM term_year ty
@@ -223,7 +227,7 @@ function aggregateTerms(
         startYear,
         endYear,
       )
-    : all<TermRow>(
+    : await all<TermRow>(
         `SELECT ${binIndex("f.year")} AS bin, t.term_key AS term_key, t.term AS term,
                 COUNT(*) AS count
          FROM fragrance_term ft
@@ -249,14 +253,14 @@ function aggregateTerms(
 }
 
 /** How many fragrances fall in each bin, i.e. the percentage denominators. */
-function aggregateTotals(
+async function aggregateTotals(
   filters: TrendFilters,
   binning: Binning,
-): Map<number, number> {
+): Promise<Map<number, number>> {
   const { startYear, endYear, size } = binning;
   const { sql, parameters } = liveConditions(filters);
   const rows = usesRollup(filters)
-    ? all<TotalRow>(
+    ? await all<TotalRow>(
         `SELECT ${binIndex("year")} AS bin, SUM(count) AS count
          FROM year_total
          WHERE gender = ? AND year BETWEEN ? AND ?
@@ -267,7 +271,7 @@ function aggregateTotals(
         startYear,
         endYear,
       )
-    : all<TotalRow>(
+    : await all<TotalRow>(
         `SELECT ${binIndex("f.year")} AS bin, COUNT(*) AS count
          FROM fragrance f
          WHERE f.year BETWEEN ? AND ? ${sql}
@@ -299,14 +303,14 @@ function toShares(counts: BinCounts | undefined, total: number): Map<string, Tre
   return new Map(shares);
 }
 
-function summarizePeriod(
+async function summarizePeriod(
   filters: TrendFilters,
   requestedStart: number,
   requestedEnd: number,
-): {
+): Promise<{
   summary: TrendPeriodSummary;
   accords: Map<string, TrendShare>;
-} {
+}> {
   const startYear = Math.max(requestedStart, MINIMUM_YEAR);
   const endYear = Math.min(requestedEnd, MAXIMUM_YEAR);
   if (endYear < startYear) {
@@ -324,10 +328,13 @@ function summarizePeriod(
 
   // A single bin spanning the whole period.
   const binning: Binning = { startYear, endYear, size: endYear - startYear + 1 };
-  const total = aggregateTotals(filters, binning).get(0) ?? 0;
-  const notes = toShares(aggregateTerms(filters, TERM_KIND.note, binning).get(0), total);
+  const total = (await aggregateTotals(filters, binning)).get(0) ?? 0;
+  const notes = toShares(
+    (await aggregateTerms(filters, TERM_KIND.note, binning)).get(0),
+    total,
+  );
   const accords = toShares(
-    aggregateTerms(filters, TERM_KIND.accord, binning).get(0),
+    (await aggregateTerms(filters, TERM_KIND.accord, binning)).get(0),
     total,
   );
 
@@ -359,12 +366,12 @@ function createBins(startYear: number, endYear: number): Bin[] {
   return bins;
 }
 
-function buildChart(
+async function buildChart(
   filters: TrendFilters,
   bins: Bin[],
   kind: TermKind,
   series: TrendShare[],
-): TrendChart {
+): Promise<TrendChart> {
   if (bins.length === 0 || series.length === 0) {
     return { labels: bins.map((bin) => bin.label), series: [] };
   }
@@ -374,8 +381,8 @@ function buildChart(
     endYear: bins.at(-1)!.endYear,
     size: bins[0]!.endYear - bins[0]!.startYear + 1,
   };
-  const counts = aggregateTerms(filters, kind, binning);
-  const totals = aggregateTotals(filters, binning);
+  const counts = await aggregateTerms(filters, kind, binning);
+  const totals = await aggregateTotals(filters, binning);
   const shares = new Map(
     bins.map((bin) => [
       bin.index,
@@ -420,14 +427,14 @@ function buildMovers(
     .slice(0, 4);
 }
 
-function buildEras(filters: TrendFilters): TrendEra[] {
+async function buildEras(filters: TrendFilters): Promise<TrendEra[]> {
   const binning: Binning = {
     startYear: MINIMUM_YEAR,
     endYear: MAXIMUM_YEAR,
     size: ERA_LENGTH,
   };
-  const counts = aggregateTerms(filters, TERM_KIND.accord, binning);
-  const totals = aggregateTotals(filters, binning);
+  const counts = await aggregateTerms(filters, TERM_KIND.accord, binning);
+  const totals = await aggregateTotals(filters, binning);
 
   const eras: TrendEra[] = [];
   for (
@@ -435,7 +442,9 @@ function buildEras(filters: TrendFilters): TrendEra[] {
     startYear <= MAXIMUM_YEAR;
     startYear += ERA_LENGTH, index += 1
   ) {
-    const dominant = [...toShares(counts.get(index), totals.get(index) ?? 0).values()][0];
+    const dominant = [
+      ...toShares(counts.get(index), totals.get(index) ?? 0).values(),
+    ][0];
     eras.push({
       startYear,
       endYear: Math.min(startYear + ERA_LENGTH - 1, MAXIMUM_YEAR),
@@ -447,12 +456,12 @@ function buildEras(filters: TrendFilters): TrendEra[] {
   return eras;
 }
 
-function buildRepresentatives(
+async function buildRepresentatives(
   filters: TrendFilters,
   topAccords: TrendShare[],
-): TrendRepresentative[] {
+): Promise<TrendRepresentative[]> {
   const { sql, parameters } = liveConditions(filters);
-  const rows = all<RepresentativeRow>(
+  const rows = await all<RepresentativeRow>(
     `SELECT f.id, f.name, f.house, f.year, f.rating, f.slug, f.image_url, f.accords
      FROM fragrance f
      WHERE f.year BETWEEN ? AND ? AND f.accord_count > 0 ${sql}
@@ -475,7 +484,9 @@ function buildRepresentatives(
       slug: row.slug,
       ...(row.image_url ? { imageUrl: row.image_url } : {}),
       sharedStyle:
-        topAccords.find((accord) => accordKeys.has(searchKey(accord.name)))?.name ??
+        topAccords.find((accord) =>
+          accordKeys.has(searchKey(accord.name)),
+        )?.name ??
         accords[0] ??
         "period pick",
     };

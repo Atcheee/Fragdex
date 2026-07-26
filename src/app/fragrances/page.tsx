@@ -10,20 +10,21 @@ import {
   getFeaturedBrowseHouses,
 } from "@/lib/catalog-browse-fragrances";
 
-const browseMeta = getBrowseFragranceMeta();
-
-export const metadata: Metadata = {
-  title: "Browse fragrances — This or That",
-  description: `Browse ${browseMeta.fragranceCount.toLocaleString("en-US")} fragrances by house, accord, release year, rating, and popularity.`,
-  alternates: { canonical: "/fragrances" },
-};
-
 /** CDN/ISR cache — browse indexes are generated at build time. */
 export const revalidate = 3600;
 
 const PAGE_SIZE = 24;
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+export async function generateMetadata(): Promise<Metadata> {
+  const browseMeta = await getBrowseFragranceMeta();
+  return {
+    title: "Browse fragrances — This or That",
+    description: `Browse ${browseMeta.fragranceCount.toLocaleString("en-US")} fragrances by house, accord, release year, rating, and popularity.`,
+    alternates: { canonical: "/fragrances" },
+  };
+}
 
 export default async function FragrancesPage({
   searchParams,
@@ -37,17 +38,12 @@ export default async function FragrancesPage({
   const sort = getParam(params, "sort") || "popular";
   const page = positiveInteger(getParam(params, "page"));
 
-  const meta = getBrowseFragranceMeta();
-  const featuredHouses = getFeaturedBrowseHouses();
-  const accords = getBrowseAccords();
-  const result = await browseFragrances(
-    query,
-    house,
-    accord,
-    sort,
-    page,
-    PAGE_SIZE,
-  );
+  const [meta, featuredHouses, accords, result] = await Promise.all([
+    getBrowseFragranceMeta(),
+    getFeaturedBrowseHouses(),
+    getBrowseAccords(),
+    browseFragrances(query, house, accord, sort, page, PAGE_SIZE),
+  ]);
 
   let activeHouseName: string | undefined;
   if (house) {
@@ -56,7 +52,7 @@ export default async function FragrancesPage({
       const { getBrowseHouseSummaries } = await import(
         "@/lib/catalog-browse-houses"
       );
-      activeHouseName = getBrowseHouseSummaries().find(
+      activeHouseName = (await getBrowseHouseSummaries()).find(
         (item) => item.slug === house,
       )?.name;
     }

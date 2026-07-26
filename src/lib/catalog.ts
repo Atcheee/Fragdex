@@ -1,6 +1,5 @@
 import "server-only";
 
-
 import {
   all,
   get,
@@ -133,11 +132,11 @@ function toHouseSummary(row: HouseRow): HouseSummary {
   };
 }
 
-function selectFragrances(
+async function selectFragrances(
   sql: string,
   ...parameters: SqlParameter[]
-): CatalogFragrance[] {
-  return all<FragranceRow>(sql, ...parameters).map(toFragrance);
+): Promise<CatalogFragrance[]> {
+  return (await all<FragranceRow>(sql, ...parameters)).map(toFragrance);
 }
 
 function toSearchResult(fragrance: CatalogFragrance): CatalogSearchResult {
@@ -151,21 +150,31 @@ function toSearchResult(fragrance: CatalogFragrance): CatalogSearchResult {
   };
 }
 
-export function getFragranceById(id: string): CatalogFragrance | undefined {
-  return selectFragrances(
-    `SELECT ${FRAGRANCE_COLUMNS} FROM fragrance f WHERE f.id = ?`,
-    id,
+export async function getFragranceById(
+  id: string,
+): Promise<CatalogFragrance | undefined> {
+  return (
+    await selectFragrances(
+      `SELECT ${FRAGRANCE_COLUMNS} FROM fragrance f WHERE f.id = ?`,
+      id,
+    )
   )[0];
 }
 
-export function getFragranceBySlug(slug: string): CatalogFragrance | undefined {
-  return selectFragrances(
-    `SELECT ${FRAGRANCE_COLUMNS} FROM fragrance f WHERE f.slug = ?`,
-    slug,
+export async function getFragranceBySlug(
+  slug: string,
+): Promise<CatalogFragrance | undefined> {
+  return (
+    await selectFragrances(
+      `SELECT ${FRAGRANCE_COLUMNS} FROM fragrance f WHERE f.slug = ?`,
+      slug,
+    )
   )[0];
 }
 
-export function getFragrancesByIds(ids: readonly string[]): CatalogFragrance[] {
+export async function getFragrancesByIds(
+  ids: readonly string[],
+): Promise<CatalogFragrance[]> {
   if (ids.length === 0) return [];
   const placeholders = ids.map(() => "?").join(",");
   return selectFragrances(
@@ -179,12 +188,14 @@ export function getFragrancesByIds(ids: readonly string[]): CatalogFragrance[] {
  * normalized key the catalog is indexed by. Returns the names as given, so
  * callers can filter their own list directly.
  */
-export function findExistingNames(names: readonly string[]): Set<string> {
+export async function findExistingNames(
+  names: readonly string[],
+): Promise<Set<string>> {
   const keys = [...new Set(names.map(searchKey))].filter(Boolean);
   if (keys.length === 0) return new Set();
 
   const placeholders = keys.map(() => "?").join(",");
-  const rows = all<{ name_key: string }>(
+  const rows = await all<{ name_key: string }>(
     `SELECT DISTINCT name_key FROM fragrance WHERE name_key IN (${placeholders})`,
     ...keys,
   );
@@ -193,26 +204,28 @@ export function findExistingNames(names: readonly string[]): Set<string> {
   return new Set(names.filter((name) => existing.has(searchKey(name))));
 }
 
-export function getCatalogSize(): number {
-  return Number(metaValue("fragranceCount") ?? 0);
+export async function getCatalogSize(): Promise<number> {
+  return Number((await metaValue("fragranceCount")) ?? 0);
 }
 
 /** Rounded catalog size floored to the nearest thousand (e.g. 91630 → 91000). */
-export function getCatalogSizeRounded(): number {
-  return Math.floor(getCatalogSize() / 1000) * 1000;
+export async function getCatalogSizeRounded(): Promise<number> {
+  return Math.floor((await getCatalogSize()) / 1000) * 1000;
 }
 
 /** Display label, e.g. 91630 → "91,000+". */
-export function getCatalogSizeLabel(): string {
-  return `${getCatalogSizeRounded().toLocaleString("en-US")}+`;
+export async function getCatalogSizeLabel(): Promise<string> {
+  return `${(await getCatalogSizeRounded()).toLocaleString("en-US")}+`;
 }
 
-export function getHouseBySlug(slug: string): HouseCatalog | undefined {
-  const row = get<HouseRow>("SELECT * FROM house WHERE slug = ?", slug);
+export async function getHouseBySlug(
+  slug: string,
+): Promise<HouseCatalog | undefined> {
+  const row = await get<HouseRow>("SELECT * FROM house WHERE slug = ?", slug);
   if (!row) return undefined;
   return {
     ...toHouseSummary(row),
-    fragrances: selectFragrances(
+    fragrances: await selectFragrances(
       `SELECT ${FRAGRANCE_COLUMNS} FROM fragrance f
        WHERE f.house_slug = ?
        ORDER BY f.votes DESC, f.rating DESC, f.name`,
@@ -221,8 +234,10 @@ export function getHouseBySlug(slug: string): HouseCatalog | undefined {
   };
 }
 
-export function getAllHouseSummaries(): HouseSummary[] {
-  return all<HouseRow>("SELECT * FROM house ORDER BY name").map(toHouseSummary);
+export async function getAllHouseSummaries(): Promise<HouseSummary[]> {
+  return (await all<HouseRow>("SELECT * FROM house ORDER BY name")).map(
+    toHouseSummary,
+  );
 }
 
 /**
@@ -232,10 +247,10 @@ export function getAllHouseSummaries(): HouseSummary[] {
  * The trigram index narrows ~100k rows to a few hundred candidates; the
  * ranking itself stays in JS where the scoring rules are easy to read.
  */
-export function searchCatalog(
+export async function searchCatalog(
   searchTerm: string,
   limit = 8,
-): CatalogSearchResult[] {
+): Promise<CatalogSearchResult[]> {
   const normalized = searchKey(searchTerm);
   if (normalized.length < 2) return [];
   const terms = expandBrandSearchTerms(normalized.split(" "), searchKey);
@@ -243,12 +258,12 @@ export function searchCatalog(
   const expandedQuery = terms.join(" ");
 
   const candidates = new Map<string, CatalogFragrance>();
-  for (const fragrance of findSearchCandidates(terms)) {
+  for (const fragrance of await findSearchCandidates(terms)) {
     candidates.set(fragrance.id, fragrance);
   }
   // An exact name match must win even when it is too obscure to survive the
   // popularity-ordered candidate cut above.
-  for (const fragrance of selectFragrances(
+  for (const fragrance of await selectFragrances(
     `SELECT ${FRAGRANCE_COLUMNS} FROM fragrance f WHERE f.name_key = ? LIMIT 20`,
     normalized,
   )) {
@@ -293,7 +308,9 @@ export function searchCatalog(
     .map(({ fragrance }) => toSearchResult(fragrance));
 }
 
-function findSearchCandidates(terms: string[]): CatalogFragrance[] {
+async function findSearchCandidates(
+  terms: string[],
+): Promise<CatalogFragrance[]> {
   // The trigram tokenizer needs at least three characters; shorter queries
   // fall back to an indexed-free scan, which is rare and still sub-second.
   const indexedTerm = [...terms]
@@ -329,16 +346,16 @@ function findSearchCandidates(terms: string[]): CatalogFragrance[] {
  * Fragrances from the same house plus the most recognizable ones sharing a
  * note or accord, re-ranked by full similarity.
  */
-export function getRelatedFragrances(
+export async function getRelatedFragrances(
   fragrance: CatalogFragrance,
   limit = 6,
-): CatalogFragrance[] {
+): Promise<CatalogFragrance[]> {
   const termKeys = [
     ...new Set([...fragrance.accords, ...allNotes(fragrance)].map(searchKey)),
   ].filter(Boolean);
 
   const candidates = new Map<string, CatalogFragrance>();
-  for (const entry of selectFragrances(
+  for (const entry of await selectFragrances(
     `SELECT ${FRAGRANCE_COLUMNS} FROM fragrance f
      WHERE f.house_slug = ?
      ORDER BY f.votes DESC
@@ -350,7 +367,7 @@ export function getRelatedFragrances(
 
   if (termKeys.length > 0) {
     const placeholders = termKeys.map(() => "?").join(",");
-    for (const entry of selectFragrances(
+    for (const entry of await selectFragrances(
       `SELECT ${FRAGRANCE_COLUMNS} FROM fragrance f
        WHERE f.rowid IN (
          SELECT ft.fragrance_rowid FROM fragrance_term ft
@@ -401,20 +418,27 @@ export function getCatalogSimilarity(
  * process is alive.
  */
 let recommendationCandidates: CatalogFragrance[] | undefined;
+let recommendationCandidatesPromise:
+  | Promise<CatalogFragrance[]>
+  | undefined;
 
-export function getRecommendationCandidates(
+export async function getRecommendationCandidates(
   limit = 2500,
-): readonly CatalogFragrance[] {
-  recommendationCandidates ??= selectFragrances(
-    `SELECT ${FRAGRANCE_COLUMNS} FROM fragrance f
-     WHERE f.rating >= 3.6 AND f.votes >= 25 AND f.accord_count > 0
-     ORDER BY f.popularity DESC, f.name
-     LIMIT ${RECOMMENDATION_CANDIDATE_LIMIT}`,
-  );
-  return recommendationCandidates.slice(
-    0,
-    Math.max(1, Math.min(limit, recommendationCandidates.length)),
-  );
+): Promise<readonly CatalogFragrance[]> {
+  if (!recommendationCandidates) {
+    recommendationCandidatesPromise ??= selectFragrances(
+      `SELECT ${FRAGRANCE_COLUMNS} FROM fragrance f
+       WHERE f.rating >= 3.6 AND f.votes >= 25 AND f.accord_count > 0
+       ORDER BY f.popularity DESC, f.name
+       LIMIT ${RECOMMENDATION_CANDIDATE_LIMIT}`,
+    ).then((rows) => {
+      recommendationCandidates = rows;
+      return rows;
+    });
+    await recommendationCandidatesPromise;
+  }
+  const pool = recommendationCandidates!;
+  return pool.slice(0, Math.max(1, Math.min(limit, pool.length)));
 }
 
 /**
@@ -422,15 +446,24 @@ export function getRecommendationCandidates(
  * pool building stays constant-cost as the catalog grows.
  */
 let gamePool: CatalogFragrance[] | undefined;
+let gamePoolPromise: Promise<CatalogFragrance[]> | undefined;
 
-export function getGamePoolFragrances(): readonly CatalogFragrance[] {
-  gamePool ??= selectFragrances(
-    `SELECT ${FRAGRANCE_COLUMNS} FROM fragrance f
-     WHERE f.in_game_pool = 1
-     ORDER BY f.votes DESC, f.rating DESC, f.name
-     LIMIT ${GAME_POOL_LIMIT}`,
-  );
-  return gamePool;
+export async function getGamePoolFragrances(): Promise<
+  readonly CatalogFragrance[]
+> {
+  if (!gamePool) {
+    gamePoolPromise ??= selectFragrances(
+      `SELECT ${FRAGRANCE_COLUMNS} FROM fragrance f
+       WHERE f.in_game_pool = 1
+       ORDER BY f.votes DESC, f.rating DESC, f.name
+       LIMIT ${GAME_POOL_LIMIT}`,
+    ).then((rows) => {
+      gamePool = rows;
+      return rows;
+    });
+    await gamePoolPromise;
+  }
+  return gamePool!;
 }
 
 /**
@@ -438,16 +471,25 @@ export function getGamePoolFragrances(): readonly CatalogFragrance[] {
  * detail for the similarity feedback to be meaningful.
  */
 let scentlePool: CatalogFragrance[] | undefined;
+let scentlePoolPromise: Promise<CatalogFragrance[]> | undefined;
 
-export function getScentleDailyPool(): readonly CatalogFragrance[] {
-  scentlePool ??= selectFragrances(
-    `SELECT ${FRAGRANCE_COLUMNS} FROM fragrance f
-     WHERE f.year > 0 AND f.rating > 0 AND f.votes >= 250
-       AND f.note_count >= 3 AND f.accord_count >= 2
-     ORDER BY f.votes DESC, f.rating DESC, f.id
-     LIMIT ${SCENTLE_POOL_LIMIT}`,
-  );
-  return scentlePool;
+export async function getScentleDailyPool(): Promise<
+  readonly CatalogFragrance[]
+> {
+  if (!scentlePool) {
+    scentlePoolPromise ??= selectFragrances(
+      `SELECT ${FRAGRANCE_COLUMNS} FROM fragrance f
+       WHERE f.year > 0 AND f.rating > 0 AND f.votes >= 250
+         AND f.note_count >= 3 AND f.accord_count >= 2
+       ORDER BY f.votes DESC, f.rating DESC, f.id
+       LIMIT ${SCENTLE_POOL_LIMIT}`,
+    ).then((rows) => {
+      scentlePool = rows;
+      return rows;
+    });
+    await scentlePoolPromise;
+  }
+  return scentlePool!;
 }
 
 export interface PoolCriteria {
@@ -466,10 +508,10 @@ export interface PoolCriteria {
  * instead of filtering the catalog in memory, so the cost is proportional to
  * the number of rounds rather than to the catalog size.
  */
-export function getPoolCandidates(
+export async function getPoolCandidates(
   criteria: PoolCriteria,
   limit: number,
-): CatalogFragrance[] {
+): Promise<CatalogFragrance[]> {
   const conditions: string[] = [];
   if (criteria.requiresRating) conditions.push("f.rating > 0");
   if (criteria.requiresPrice) conditions.push("f.price > 0");
@@ -497,7 +539,7 @@ export function getPoolCandidates(
  * Every fragrance with a price in the range the Price Ladder treats as
  * dependable. Small enough (low thousands) to rank in memory.
  */
-export function getPricedFragrances(): CatalogFragrance[] {
+export async function getPricedFragrances(): Promise<CatalogFragrance[]> {
   return selectFragrances(
     `SELECT ${FRAGRANCE_COLUMNS} FROM fragrance f
      WHERE f.price >= 25 AND f.price <= 600
@@ -506,7 +548,9 @@ export function getPricedFragrances(): CatalogFragrance[] {
 }
 
 /** Most-voted fragrances first. */
-export function getTopFragrances(limit: number): CatalogFragrance[] {
+export async function getTopFragrances(
+  limit: number,
+): Promise<CatalogFragrance[]> {
   return selectFragrances(
     `SELECT ${FRAGRANCE_COLUMNS} FROM fragrance f
      ORDER BY f.votes DESC, f.rating DESC, f.name
@@ -515,29 +559,39 @@ export function getTopFragrances(limit: number): CatalogFragrance[] {
   );
 }
 
-export function getPopularFragranceSlugs(limit = 250): string[] {
-  return all<{ slug: string }>(
-    "SELECT slug FROM fragrance ORDER BY votes DESC, rating DESC, name LIMIT ?",
-    Math.max(1, Math.floor(limit)),
+export async function getPopularFragranceSlugs(
+  limit = 250,
+): Promise<string[]> {
+  return (
+    await all<{ slug: string }>(
+      "SELECT slug FROM fragrance ORDER BY votes DESC, rating DESC, name LIMIT ?",
+      Math.max(1, Math.floor(limit)),
+    )
   ).map((row) => row.slug);
 }
 
-export function getPopularCatalogFragrances(limit = 9): CatalogSearchResult[] {
-  return getTopFragrances(Math.max(1, Math.min(limit, 24))).map(toSearchResult);
+export async function getPopularCatalogFragrances(
+  limit = 9,
+): Promise<CatalogSearchResult[]> {
+  return (await getTopFragrances(Math.max(1, Math.min(limit, 24)))).map(
+    toSearchResult,
+  );
 }
 
 /** Streams every slug so the sitemap never materializes the whole catalog. */
-export function* iterateFragranceSlugs(): Generator<string> {
-  for (const row of iterate<{ slug: string }>(
+export async function* iterateFragranceSlugs(): AsyncGenerator<string> {
+  for await (const row of iterate<{ slug: string }>(
     "SELECT slug FROM fragrance ORDER BY votes DESC",
   )) {
     yield row.slug;
   }
 }
 
-export function getAccordNames(): string[] {
-  return all<{ term: string }>(
-    "SELECT term FROM term WHERE kind = ? ORDER BY term",
-    TERM_KIND.accord,
+export async function getAccordNames(): Promise<string[]> {
+  return (
+    await all<{ term: string }>(
+      "SELECT term FROM term WHERE kind = ? ORDER BY term",
+      TERM_KIND.accord,
+    )
   ).map((row) => row.term);
 }

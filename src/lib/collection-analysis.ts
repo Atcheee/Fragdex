@@ -174,13 +174,13 @@ function recommendationFor(
   };
 }
 
-function getRecommendations(
+async function getRecommendations(
   owned: CatalogFragrance[],
   excludedIds: Set<string>,
   seasons: CollectionCoverage[],
   gaps: CollectionGap[],
   redundantPairs: SimilarityBreakdown[],
-): CollectionAnalysis["recommendations"] {
+): Promise<CollectionAnalysis["recommendations"]> {
   const weakestSeason =
     [...seasons].sort((a, b) => a.score - b.score)[0]?.name ?? "Season";
   const weakestSeasonKey = weakestSeason.toLowerCase() as WearOccasion;
@@ -188,7 +188,7 @@ function getRecommendations(
     gaps.filter((gap) => gap.count === 0).map((gap) => gap.name),
   );
 
-  const candidates = getRecommendationCandidates()
+  const candidates = (await getRecommendationCandidates())
     .filter((candidate) => !excludedIds.has(candidate.id))
     .map((candidate) => {
       const similarities = owned.map((fragrance) =>
@@ -238,10 +238,13 @@ function getRecommendations(
     .filter((candidate) => candidate.candidate.id !== best?.candidate.id)
     .sort((a, b) => b.unusualScore - a.unusualScore)[0];
 
-  const redundantCounts = new Map<string, { fragrance: CatalogFragrance; score: number }>();
+  const redundantCounts = new Map<
+    string,
+    { fragrance: CatalogFragrance; score: number }
+  >();
   for (const pair of redundantPairs) {
     for (const fragrance of [pair.first, pair.second]) {
-      const catalogFragrance = getFragranceById(fragrance.id);
+      const catalogFragrance = await getFragranceById(fragrance.id);
       if (!catalogFragrance) continue;
       const current = redundantCounts.get(fragrance.id);
       redundantCounts.set(fragrance.id, {
@@ -285,18 +288,23 @@ function getRecommendations(
   };
 }
 
-export function analyzeCollection(
+export async function analyzeCollection(
   entries: Pick<CollectionEntry, "id" | "status">[],
-): CollectionAnalysis {
-  const catalogEntries = entries
-    .map((entry) => ({ ...entry, fragrance: getFragranceById(entry.id) }))
-    .filter(
-      (
-        entry,
-      ): entry is Pick<CollectionEntry, "id" | "status"> & {
-        fragrance: CatalogFragrance;
-      } => Boolean(entry.fragrance),
-    );
+): Promise<CollectionAnalysis> {
+  const catalogEntries = (
+    await Promise.all(
+      entries.map(async (entry) => ({
+        ...entry,
+        fragrance: await getFragranceById(entry.id),
+      })),
+    )
+  ).filter(
+    (
+      entry,
+    ): entry is Pick<CollectionEntry, "id" | "status"> & {
+      fragrance: CatalogFragrance;
+    } => Boolean(entry.fragrance),
+  );
   const owned = catalogEntries
     .filter((entry) => entry.status === "owned")
     .map((entry) => entry.fragrance);
@@ -337,7 +345,7 @@ export function analyzeCollection(
     redundantPairs,
     recommendations:
       owned.length > 0
-        ? getRecommendations(
+        ? await getRecommendations(
             owned,
             new Set(catalogEntries.map((entry) => entry.id)),
             seasons,

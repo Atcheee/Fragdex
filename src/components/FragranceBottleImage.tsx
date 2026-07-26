@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { isVercelBlobUrl } from "@/lib/blob-url";
 import { bottleCandidates } from "@/lib/bottle-images";
 
 export { bottleCandidates, primaryBottleSrc } from "@/lib/bottle-images";
@@ -17,7 +18,12 @@ const OPTIMIZABLE_HOSTS = new Set([
 function canOptimizeSrc(src: string): boolean {
   if (src.startsWith("/")) return true;
   try {
-    return OPTIMIZABLE_HOSTS.has(new URL(src).hostname);
+    const host = new URL(src).hostname;
+    return (
+      OPTIMIZABLE_HOSTS.has(host) ||
+      host.endsWith(".public.blob.vercel-storage.com") ||
+      isVercelBlobUrl(src)
+    );
   } catch {
     return false;
   }

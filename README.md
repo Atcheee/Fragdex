@@ -33,24 +33,33 @@ Open [http://localhost:3000](http://localhost:3000).
 
 `src/data/fragrances.json` is the editable source of truth — scrapers and importers read and write it, and it is the only file to back up. Nothing reads it at request time.
 
-At build time `scripts/build-catalog-db.ts` compiles it into a read-only SQLite database at `src/data/generated/catalog.db`, and that is what the app queries. This is why a ~136k-entry catalog does not cost anything at startup: opening a SQLite file is O(1) and pages are read lazily, whereas the JSON had to be parsed in full before the first request could be served.
+At build time `scripts/build-catalog-db.ts` compiles it into a local SQLite seed at `src/data/generated/catalog.db`. Runtime queries go to **Turso** (`TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN`) via `@libsql/client`. After regenerating the local DB, push it:
 
 ```bash
-npm run generate:catalog   # rebuild catalog.db from fragrances.json
+npm run generate:catalog   # rebuild local catalog.db from fragrances.json
+npm run push:catalog       # copy local catalog.db into Turso (needs .env.local)
 ```
 
-You rarely need to run it by hand. `prebuild` regenerates it, and `predev` regenerates it whenever `catalog.db` is missing or older than `fragrances.json` — so a fresh clone or a fresh scrape is picked up by the next `npm run dev`. If a dev server is already running when you scrape, restart it.
+`prebuild` / `predev` still generate the local seed (and atlas). They do **not** push to Turso — run `push:catalog` when the catalog changes.
 
 What the build precomputes, and why:
 
-- **Interned note/accord terms.** Notes and accords become integer IDs in a `fragrance_term` link table, which is what keeps the database small enough to ship.
+- **Interned note/accord terms.** Notes and accords become integer IDs in a `fragrance_term` link table.
 - **A trigram full-text index** over "name house", so substring queries (`avent` → *Aventus*) are indexed rather than scanned.
 - **Per-year term rollups** (`term_year`, `year_total`), which collapse a million-row join ahead of time so the trend explorer answers from a few hundred rows.
 - **Denormalized counts** (`note_count`, `accord_count`, `popularity`) and covering indexes, so filtering and sorting never fault in the large text columns.
 
-`catalog.db` is generated, gitignored, and traced into the serverless bundle by `outputFileTracingIncludes` in `next.config.ts`; `fragrances.json` is explicitly excluded from it. The database currently occupies ~194MB of a ~240MB catalog budget (Vercel's 250MB unzipped function limit, less code and dependencies), so there is little headroom left. `npm run generate:catalog` warns when it gets close. Past that point, move the database to object storage and fetch it at runtime, or split the read paths onto a hosted Postgres/Turso instance.
+Query Turso through the helpers in `src/lib/catalog-db.ts` (`all`, `get`, `iterate`) rather than preparing statements directly.
 
-Query it through the helpers in `src/lib/catalog-db.ts` (`all`, `get`, `iterate`) rather than preparing statements directly — they return plain objects, and `node:sqlite` rows have a null prototype that React refuses to send to a Client Component.
+### Bottle images (Vercel Blob)
+
+Bottle `image_url` values may still point at CDN hosts (Fraganty, etc.). When an URL is already on `*.public.blob.vercel-storage.com`, the UI prefers it. To migrate a single bottle:
+
+```bash
+npm run upload:bottle -- --id <fragranceId>
+```
+
+Requires `BLOB_READ_WRITE_TOKEN` (and Turso env vars to rewrite `image_url`).
 
 ## Data
 

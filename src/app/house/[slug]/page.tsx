@@ -17,15 +17,15 @@ interface HousePageProps {
 // Every house is generated below; do not emit an unused fallback function.
 export const dynamicParams = false;
 
-export function generateStaticParams() {
-  return getAllHouseSummaries().map((house) => ({ slug: house.slug }));
+export async function generateStaticParams() {
+  return (await getAllHouseSummaries()).map((house) => ({ slug: house.slug }));
 }
 
 export async function generateMetadata({
   params,
 }: HousePageProps): Promise<Metadata> {
   const { slug } = await params;
-  const house = getHouseBySlug(slug);
+  const house = await getHouseBySlug(slug);
   if (!house) return { title: "Fragrance house not found" };
 
   const description = `Explore ${house.fragranceCount} fragrances by ${house.name}. Search and filter the collection by name, year, notes, accords, rating, and popularity.`;
@@ -45,7 +45,7 @@ export async function generateMetadata({
 
 export default async function HousePage({ params }: HousePageProps) {
   const { slug } = await params;
-  const house = getHouseBySlug(slug);
+  const house = await getHouseBySlug(slug);
   if (!house) notFound();
 
   const collection: HouseCollectionItem[] = house.fragrances.map(

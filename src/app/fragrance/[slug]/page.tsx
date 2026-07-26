@@ -23,15 +23,15 @@ interface FragrancePageProps {
 
 export const dynamicParams = true;
 
-export function generateStaticParams() {
-  return getPopularFragranceSlugs().map((slug) => ({ slug }));
+export async function generateStaticParams() {
+  return (await getPopularFragranceSlugs()).map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({
   params,
 }: FragrancePageProps): Promise<Metadata> {
   const { slug } = await params;
-  const fragrance = getFragranceBySlug(slug);
+  const fragrance = await getFragranceBySlug(slug);
   if (!fragrance) return { title: "Fragrance not found" };
 
   const description =
@@ -58,11 +58,13 @@ export async function generateMetadata({
 
 export default async function FragrancePage({ params }: FragrancePageProps) {
   const { slug } = await params;
-  const fragrance = getFragranceBySlug(slug);
+  const fragrance = await getFragranceBySlug(slug);
   if (!fragrance) notFound();
 
-  const related = getRelatedFragrances(fragrance);
-  const family = getFragranceFamilyForFragrance(fragrance.id);
+  const [related, family] = await Promise.all([
+    getRelatedFragrances(fragrance),
+    getFragranceFamilyForFragrance(fragrance.id),
+  ]);
   const heroSrc = primaryBottleSrc(fragrance.imageUrl);
 
   return (

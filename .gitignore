@@ -40,6 +40,9 @@
 !/scripts/ensure-catalog-db.mjs
 !/scripts/generate-fragrance-atlas.ts
 !/scripts/sync-fragrantica-cache.ts
+!/scripts/push-catalog-to-turso.ts
+!/scripts/finish-catalog-push.ts
+!/scripts/upload-bottle-image.ts
 
 # compiled catalog — rebuilt from src/data/fragrances.json by `prebuild`
 /src/data/generated/

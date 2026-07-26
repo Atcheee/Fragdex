@@ -10,7 +10,7 @@ const TIERS = new Set<NoteTier>(["top", "heart", "base"]);
 const OPERATIONS = new Set(["remove", "replace", "add"]);
 const MAX_TEXT_LENGTH = 100;
 
-export function GET(request: Request) {
+export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   if (searchParams.has("notes")) {
     const query = (searchParams.get("notes") ?? "")
@@ -23,7 +23,7 @@ export function GET(request: Request) {
   }
 
   const id = (searchParams.get("id") ?? "").trim().slice(0, 200);
-  const fragrance = id ? getSwapNoteFragrance(id) : null;
+  const fragrance = id ? await getSwapNoteFragrance(id) : null;
   if (!fragrance) {
     return NextResponse.json({ error: "Fragrance not found." }, { status: 404 });
   }
@@ -83,7 +83,7 @@ export async function POST(request: Request) {
   } as SwapNoteEdit;
 
   try {
-    return NextResponse.json(matchSwapNote(fragranceId, edit), {
+    return NextResponse.json(await matchSwapNote(fragranceId, edit), {
       headers: { "Cache-Control": "private, no-store" },
     });
   } catch (error) {

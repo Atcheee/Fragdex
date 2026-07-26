@@ -20,8 +20,10 @@ function summary(fragrance: Fragrance): ScentleFragranceSummary {
   };
 }
 
-export function getDailyScentleAnswer(date = new Date()): Fragrance {
-  const pool = getScentleDailyPool();
+export async function getDailyScentleAnswer(
+  date = new Date(),
+): Promise<Fragrance> {
+  const pool = await getScentleDailyPool();
   if (pool.length === 0) {
     throw new Error("No fragrances are eligible for Scentle.");
   }
@@ -29,20 +31,20 @@ export function getDailyScentleAnswer(date = new Date()): Fragrance {
   return pool[seed % pool.length]!;
 }
 
-export function getScentleAnswerSummary(
+export async function getScentleAnswerSummary(
   date = new Date(),
-): ScentleFragranceSummary {
-  return summary(getDailyScentleAnswer(date));
+): Promise<ScentleFragranceSummary> {
+  return summary(await getDailyScentleAnswer(date));
 }
 
-export function scoreScentleGuess(
+export async function scoreScentleGuess(
   guessId: string,
   date = new Date(),
-): ScentleGuessFeedback | null {
-  const guess = getFragranceById(guessId);
+): Promise<ScentleGuessFeedback | null> {
+  const guess = await getFragranceById(guessId);
   if (!guess) return null;
 
-  const answer = getDailyScentleAnswer(date);
+  const answer = await getDailyScentleAnswer(date);
   const isCorrect = guess.id === answer.id;
   const similarity = scoreFragranceSimilarity(answer, guess);
 

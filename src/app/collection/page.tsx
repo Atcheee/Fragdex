@@ -9,6 +9,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/collection" },
 };
 
-export default function CollectionPage() {
-  return <CollectionWorkbench catalogSizeLabel={getCatalogSizeLabel()} />;
+export default async function CollectionPage() {
+  return (
+    <CollectionWorkbench catalogSizeLabel={await getCatalogSizeLabel()} />
+  );
 }

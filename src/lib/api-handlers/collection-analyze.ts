@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     ).values(),
   ];
 
-  return NextResponse.json(analyzeCollection(entries), {
+  return NextResponse.json(await analyzeCollection(entries), {
     headers: { "Cache-Control": "private, no-store" },
   });
 }
