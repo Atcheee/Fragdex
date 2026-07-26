@@ -354,7 +354,7 @@ export function BottleSilhouetteGame({
               eager
               well={false}
               stage={false}
-              process
+              preferCutout
               className="max-h-52 w-auto max-w-full object-contain"
             />
           </div>
@@ -631,7 +631,7 @@ function BottleVisual({
           eager
           well={false}
           stage={false}
-          process
+          preferCutout
           className={imageClassName}
           placeholderClassName="h-32 w-auto text-black"
         />
@@ -654,7 +654,7 @@ function BottleVisual({
             eager
             well={false}
             stage={false}
-            process
+            preferCutout
             className={imageClassName}
             placeholderClassName="h-32 w-auto text-black"
           />

@@ -1,14 +1,11 @@
-const PROCESS_VERSION = "21";
-
 /** Resolve ordered bottle image URLs for a catalog imageUrl. */
 export function bottleCandidates(
   imageUrl: string | undefined,
-  options: { preferOpaque?: boolean; process?: boolean } = {},
+  options: { preferOpaque?: boolean } = {},
 ): string[] {
   if (!imageUrl || imageUrl.includes("cdn.fragella.com")) return [];
 
   const preferOpaque = options.preferOpaque ?? true;
-  const process = options.process ?? true;
   const fragantyId =
     imageUrl.match(/img\.fraganty\.ai\/perfume(?:-nobg)?\/(\d+)\./i)?.[1] ??
     null;
@@ -29,15 +26,10 @@ export function bottleCandidates(
     sources.push(imageUrl);
   }
 
-  if (!process) return sources;
-
-  return sources.map(
-    (src) =>
-      `/api/fragrance-image?v=${PROCESS_VERSION}&src=${encodeURIComponent(src)}`,
-  );
+  return sources;
 }
 
-/** Primary bottle URL used for LCP preload / metadata (no ML processing). */
+/** Primary bottle URL used for LCP preload and metadata. */
 export function primaryBottleSrc(imageUrl: string | undefined): string | undefined {
-  return bottleCandidates(imageUrl, { preferOpaque: true, process: false })[0];
+  return bottleCandidates(imageUrl, { preferOpaque: true })[0];
 }

@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 import path from "node:path";
 
+const catalogRuntimeFiles = ["./src/data/generated/catalog.db"];
+
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
@@ -27,18 +29,32 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ["@phosphor-icons/react"],
   },
-  // ONNX stays in scripts/cutout-worker.mjs (child process). Keep sharp
-  // external so the API route's native binding stays intact.
+  // Keep sharp external so its native image-optimizer binding stays intact.
   serverExternalPackages: ["sharp"],
   // The catalog is read through node:sqlite at a runtime path, which the
-  // bundler cannot discover on its own, so it is traced in explicitly.
+  // bundler cannot discover. Include it only in routes that can execute after
+  // build; a global include makes every Vercel function roughly 194 MB and
+  // prevents Vercel from bundling routes under the Hobby function-count limit.
   outputFileTracingIncludes: {
-    "/**": ["./src/data/generated/catalog.db"],
+    "/api/\\[\\.\\.\\.path\\]": catalogRuntimeFiles,
+    "/compare": catalogRuntimeFiles,
+    "/family/\\[slug\\]": catalogRuntimeFiles,
+    "/fragrance/\\[slug\\]": catalogRuntimeFiles,
+    "/fragrances": catalogRuntimeFiles,
+    "/houses": catalogRuntimeFiles,
+    "/trends": catalogRuntimeFiles,
   },
-  // fragrances.json is the build-time source for that database; nothing reads
-  // it at runtime and it would otherwise double the function size.
+  // These routes read the catalog only while prerendering. Exclude the DB from
+  // their server traces so Vercel can bundle the small route artifacts.
+  // fragrances.json is also build-only and would duplicate the database.
   outputFileTracingExcludes: {
     "/**": ["./src/data/fragrances.json"],
+    "/atlas": catalogRuntimeFiles,
+    "/collection": catalogRuntimeFiles,
+    "/families": catalogRuntimeFiles,
+    "/house/\\[slug\\]": catalogRuntimeFiles,
+    "/passport": catalogRuntimeFiles,
+    "/sitemap.xml": catalogRuntimeFiles,
   },
   images: {
     formats: ["image/avif", "image/webp"],

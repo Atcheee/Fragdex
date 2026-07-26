@@ -33,11 +33,8 @@ interface FragranceBottleImageProps {
   well?: boolean;
   /** Soft radial stage behind the bottle. Off by default. */
   stage?: boolean;
-  /**
-   * Route through /api/fragrance-image for ML cutouts. Off by default —
-   * catalog uses opaque studio shots + dark-mode multiply blend instead.
-   */
-  process?: boolean;
+  /** Prefer an upstream transparent bottle image when one is available. */
+  preferCutout?: boolean;
   /** Intrinsic ratio for next/image; bottles are typically ~3:4. */
   width?: number;
   height?: number;
@@ -54,7 +51,7 @@ export function FragranceBottleImage({
   eager = false,
   well = false,
   stage = false,
-  process = false,
+  preferCutout = false,
   width = 375,
   height = 500,
   sizes = "(max-width: 640px) 45vw, 140px",
@@ -64,15 +61,14 @@ export function FragranceBottleImage({
   stageClassName = "",
 }: FragranceBottleImageProps) {
   const candidates = bottleCandidates(imageUrl, {
-    preferOpaque: true,
-    process,
+    preferOpaque: !preferCutout,
   });
   const [candidateIndex, setCandidateIndex] = useState(0);
   const src = candidates[candidateIndex];
 
   useEffect(() => {
     setCandidateIndex(0);
-  }, [imageUrl, process]);
+  }, [imageUrl, preferCutout]);
 
   const advance = () => setCandidateIndex((index) => index + 1);
 

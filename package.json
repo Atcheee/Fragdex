@@ -17,7 +17,6 @@
     "@gsap/react": "^2.1.2",
     "@hugeicons/core-free-icons": "^4.2.2",
     "@hugeicons/react": "^1.1.9",
-    "@imgly/background-removal-node": "^1.4.5",
     "@phosphor-icons/react": "^2.1.10",
     "gsap": "^3.15.0",
     "next": "16.2.10",
@@ -34,7 +33,6 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild",
-      "onnxruntime-node",
       "sharp",
       "unrs-resolver"
     ]
