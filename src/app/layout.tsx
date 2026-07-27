@@ -3,10 +3,12 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { SiteHeader } from "@/components/SiteHeader";
 import { fraunces, ibmPlexMono, plusJakarta } from "@/lib/fonts";
+import { AuthProvider } from "@/components/auth/AuthProvider";
+import { AccountSyncProvider } from "@/components/auth/AccountSyncProvider";
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ??
-  "https://this-or-that-fragrance-games.vercel.app";
+  "https://fragrance-games.vercel.app";
 
 const title = "This or That — Fragrance Games";
 const description =
@@ -74,11 +76,15 @@ export default function RootLayout({
     >
       <body className="flex min-h-full flex-col font-sans font-medium">
         <ThemeProvider>
-          <SiteHeader />
+          <AuthProvider>
+            <AccountSyncProvider>
+              <SiteHeader />
+              <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-5 py-10 sm:px-8 sm:py-12">
+                {children}
+              </main>
+            </AccountSyncProvider>
+          </AuthProvider>
         </ThemeProvider>
-        <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-5 py-10 sm:px-8 sm:py-12">
-          {children}
-        </main>
         <footer className="border-t border-border py-5 text-center text-xs text-muted">
           Fragrance data is approximate and for entertainment only.
         </footer>

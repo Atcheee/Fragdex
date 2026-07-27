@@ -26,6 +26,11 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     optimizePackageImports: ["@phosphor-icons/react"],
+    // Turso backs every catalog page. Keep prerendering below the database's
+    // memory/concurrency ceiling when many clone and fragrance routes build.
+    staticGenerationRetryCount: 2,
+    staticGenerationMaxConcurrency: 2,
+    staticGenerationMinPagesPerWorker: 100,
   },
   // Keep sharp external so its native image-optimizer binding stays intact.
   serverExternalPackages: ["sharp", "@libsql/client"],

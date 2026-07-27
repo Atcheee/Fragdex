@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { fetchNoteImageUrl } from "@/lib/visuals/note-images";
 import { noteIconUrl } from "@/lib/visuals/note-icons";
 
@@ -9,6 +9,7 @@ interface NoteImageProps {
   name: string;
   className?: string;
   imageClassName?: string;
+  style?: CSSProperties;
 }
 
 /** Perfume-note artwork with Fragrantica icon, Wikimedia, then monogram fallbacks. */
@@ -16,6 +17,7 @@ export function NoteImage({
   name,
   className = "h-12 w-12 rounded-xl",
   imageClassName = "h-[88%] w-[88%] object-contain",
+  style,
 }: NoteImageProps) {
   const primarySrc = noteIconUrl(name);
   const [fallback, setFallback] = useState<{
@@ -62,6 +64,7 @@ export function NoteImage({
   return (
     <span
       className={`relative flex shrink-0 items-center justify-center overflow-hidden bg-white text-stone-500 ring-1 ring-border ${className}`}
+      style={style}
       aria-hidden="true"
     >
       {src && !failed ? (

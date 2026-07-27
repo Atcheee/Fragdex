@@ -5,8 +5,13 @@ import { useParams } from "next/navigation";
 import { getMode } from "@/lib/modes";
 import { GameController } from "@/components/game/GameController";
 import { ScentleGame } from "@/components/game/ScentleGame";
+import type { CloneMatchEntry } from "@/lib/engines/clone-match";
 
-export function PlayClient() {
+export function PlayClient({
+  cloneEntries,
+}: {
+  cloneEntries?: CloneMatchEntry[];
+}) {
   const params = useParams<{ mode: string }>();
   const meta = getMode(params.mode);
 
@@ -25,5 +30,5 @@ export function PlayClient() {
     return <ScentleGame meta={meta} />;
   }
 
-  return <GameController meta={meta} />;
+  return <GameController meta={meta} cloneEntries={cloneEntries} />;
 }

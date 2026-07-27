@@ -3,6 +3,7 @@ import { BrandMark } from "@/components/BrandMark";
 import { LazyFragranceSearch } from "@/components/LazyFragranceSearch";
 import { PrimaryNav } from "@/components/PrimaryNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { HeaderAccount } from "@/components/auth/HeaderAccount";
 
 export function SiteHeader() {
   return (
@@ -30,6 +31,7 @@ export function SiteHeader() {
           className="col-start-3 row-start-1 flex shrink-0 items-center gap-4 justify-self-end md:col-start-4"
         >
           <ThemeToggle />
+          <HeaderAccount />
         </nav>
       </div>
     </header>

@@ -1,3 +1,5 @@
+import { notifyAccountDataChanged } from "./account-data";
+
 export const COLLECTION_STATUSES = [
   "owned",
   "sampled",
@@ -72,7 +74,7 @@ export interface CollectionAnalysis {
   };
 }
 
-const STORAGE_KEY = "tot-fragrance-collection";
+export const COLLECTION_STORAGE_KEY = "tot-fragrance-collection";
 const CHANGE_EVENT = "tot-fragrance-collection-change";
 const MAX_COLLECTION_SIZE = 500;
 
@@ -98,7 +100,7 @@ function isCollectionEntry(value: unknown): value is CollectionEntry {
 export function getCollection(): CollectionEntry[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(COLLECTION_STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
@@ -112,10 +114,11 @@ function saveCollection(entries: CollectionEntry[]): void {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(
-      STORAGE_KEY,
+      COLLECTION_STORAGE_KEY,
       JSON.stringify(entries.slice(0, MAX_COLLECTION_SIZE)),
     );
     window.dispatchEvent(new CustomEvent(CHANGE_EVENT));
+    notifyAccountDataChanged();
   } catch {
     // Ignore quota and private-mode failures.
   }
@@ -149,11 +152,16 @@ export function removeFromCollection(id: string): CollectionEntry[] {
 export function clearCollection(): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.removeItem(STORAGE_KEY);
+    window.localStorage.removeItem(COLLECTION_STORAGE_KEY);
     window.dispatchEvent(new CustomEvent(CHANGE_EVENT));
+    notifyAccountDataChanged();
   } catch {
     // Ignore storage failures.
   }
+}
+
+export function replaceCollection(entries: CollectionEntry[]): void {
+  saveCollection(entries.filter(isCollectionEntry));
 }
 
 export function subscribeToCollection(listener: () => void): () => void {

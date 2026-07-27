@@ -3,6 +3,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { FragranceSearchResultVisual } from "@/components/FragranceSearchResultVisual";
 import { dailyStreak } from "@/lib/daily";
+import { notifyAccountDataChanged } from "@/lib/account-data";
 import {
   BINGO_SQUARES,
   completedBingoLines,
@@ -186,6 +187,7 @@ export function FragranceBingoGame({
       `${STORAGE_PREFIX}${dateKey}`,
       JSON.stringify(stored),
     );
+    notifyAccountDataChanged();
   }, [
     bingoSeconds,
     blackoutSeconds,

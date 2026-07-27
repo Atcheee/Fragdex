@@ -1,9 +1,11 @@
 import { NoteImage } from "@/components/NoteImage";
+import type { NoteProminence, NoteTier } from "@/lib/types";
 
 interface PerfumePyramidProps {
   topNotes: string[];
   heartNotes: string[];
   baseNotes: string[];
+  noteProminence?: NoteProminence;
   /** When set, matching notes get a highlighted ring. */
   highlight?: string;
 }
@@ -12,6 +14,7 @@ export function PerfumePyramid({
   topNotes,
   heartNotes,
   baseNotes,
+  noteProminence,
   highlight,
 }: PerfumePyramidProps) {
   const hasNotes =
@@ -33,9 +36,27 @@ export function PerfumePyramid({
       </header>
 
       <div className="flex flex-col divide-y divide-border">
-        <PyramidTier label="Top notes" notes={topNotes} highlight={highlight} />
-        <PyramidTier label="Middle notes" notes={heartNotes} highlight={highlight} />
-        <PyramidTier label="Base notes" notes={baseNotes} highlight={highlight} />
+        <PyramidTier
+          label="Top notes"
+          tier="top"
+          notes={topNotes}
+          prominence={noteProminence?.top}
+          highlight={highlight}
+        />
+        <PyramidTier
+          label="Middle notes"
+          tier="heart"
+          notes={heartNotes}
+          prominence={noteProminence?.heart}
+          highlight={highlight}
+        />
+        <PyramidTier
+          label="Base notes"
+          tier="base"
+          notes={baseNotes}
+          prominence={noteProminence?.base}
+          highlight={highlight}
+        />
       </div>
     </div>
   );
@@ -43,11 +64,15 @@ export function PerfumePyramid({
 
 function PyramidTier({
   label,
+  tier,
   notes,
+  prominence,
   highlight,
 }: {
   label: string;
+  tier: NoteTier;
   notes: string[];
+  prominence?: Record<string, number>;
   highlight?: string;
 }) {
   if (notes.length === 0) return null;
@@ -57,22 +82,25 @@ function PyramidTier({
       <h3 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">
         {label}
       </h3>
-      <ul className="flex flex-wrap items-start justify-center gap-5">
+      <ul className="flex flex-wrap items-end justify-center gap-5">
         {notes.map((note) => {
           const isHighlighted =
             !!highlight &&
             note.trim().toLowerCase() === highlight.trim().toLowerCase();
+          const score = noteProminenceScore(prominence, note);
+          const size = score == null ? 80 : Math.round(40 + score * 40);
           return (
             <li
-              key={note}
+              key={`${tier}-${note}`}
               className={`flex w-24 flex-col items-center gap-2 ${
                 isHighlighted ? "rounded-2xl ring-2 ring-accent ring-offset-2 ring-offset-card" : ""
               }`}
             >
               <NoteImage
                 name={note}
-                className="h-20 w-20 rounded-2xl"
+                className="rounded-2xl"
                 imageClassName="h-[88%] w-[88%] rounded-xl object-cover"
+                style={{ width: size, height: size }}
               />
               <span
                 className={`text-center text-sm leading-snug ${
@@ -87,6 +115,19 @@ function PyramidTier({
       </ul>
     </div>
   );
+}
+
+function noteProminenceScore(
+  prominence: Record<string, number> | undefined,
+  note: string,
+): number | null {
+  if (!prominence) return null;
+  const wanted = note.trim().toLowerCase();
+  const match = Object.entries(prominence).find(
+    ([name]) => name.trim().toLowerCase() === wanted,
+  );
+  if (!match || !Number.isFinite(match[1])) return null;
+  return Math.min(1, Math.max(0, match[1]));
 }
 
 function FlaskIcon({ className }: { className?: string }) {

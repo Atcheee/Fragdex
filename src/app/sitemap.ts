@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getAllHouseSummaries, iterateFragranceSlugs } from "@/lib/catalog";
+import { getCloneSlugs } from "@/lib/clone-data";
 import { MODES } from "@/lib/modes";
 
 const siteUrl =
@@ -23,6 +24,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
     {
       url: `${siteUrl}/houses`,
+      lastModified,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
+      url: `${siteUrl}/clones`,
       lastModified,
       changeFrequency: "weekly",
       priority: 0.8,
@@ -52,6 +59,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
+  const cloneRoutes: MetadataRoute.Sitemap = getCloneSlugs().map((slug) => ({
+    url: `${siteUrl}/clone/${slug}`,
+    lastModified,
+    changeFrequency: "weekly",
+    priority: 0.6,
+  }));
+
   const houseRoutes: MetadataRoute.Sitemap = (
     await getAllHouseSummaries()
   ).map((house) => ({
@@ -61,5 +75,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
-  return [...staticRoutes, ...gameRoutes, ...houseRoutes, ...fragranceRoutes];
+  return [
+    ...staticRoutes,
+    ...gameRoutes,
+    ...houseRoutes,
+    ...cloneRoutes,
+    ...fragranceRoutes,
+  ];
 }

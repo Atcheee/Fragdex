@@ -63,6 +63,14 @@ export const MODES: GameModeMeta[] = [
     howTo: "Read a description with the fragrance name and house blacked out, then pick the right fragrance from four options.",
   },
   {
+    id: "clone-match",
+    kind: "clone-match",
+    title: "Clone Match",
+    tagline: "Match affordable alternatives to their originals.",
+    howTo:
+      "An original fragrance is shown with four possible clones. Pick the listed affordable alternative, then compare its similarity, price, and savings estimates.",
+  },
+  {
     id: "fake-or-real",
     kind: "fake-or-real",
     title: "Fake or Real?",

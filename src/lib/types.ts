@@ -6,6 +6,13 @@ export type WearOccasion =
   | "day"
   | "night";
 
+export type NoteTier = "top" | "heart" | "base";
+
+/** Fragrantica pyramid prominence normalized to 0–1 within its 40–80px scale. */
+export type NoteProminence = Partial<
+  Record<NoteTier, Record<string, number>>
+>;
+
 export interface Fragrance {
   id: string;
   name: string;
@@ -18,6 +25,8 @@ export interface Fragrance {
   topNotes: string[];
   heartNotes: string[];
   baseNotes: string[];
+  /** Per-tier note prominence (0–1), when captured from the source pyramid. */
+  noteProminence?: NoteProminence;
   accords: string[];
   description: string;
   /** Community vote count (popularity signal), when known */
@@ -42,6 +51,7 @@ export type GameModeId =
   | "has-accord"
   | "which-house"
   | "guess-description"
+  | "clone-match"
   | "fake-or-real"
   | "find-favorite"
   | "perfect-match"
@@ -66,6 +76,7 @@ export type GameKind =
   | "this-or-that"
   | "yes-no"
   | "multiple-choice"
+  | "clone-match"
   | "fake-or-real"
   | "bracket"
   | "discovery"
@@ -93,6 +104,8 @@ export interface GameModeMeta {
 }
 
 export interface GameRecord {
+  /** Stable client-generated identifier used for idempotent account sync. */
+  id: string;
   mode: GameModeId;
   /** Correct answers (or names found / bracket winner rounds) */
   score: number;

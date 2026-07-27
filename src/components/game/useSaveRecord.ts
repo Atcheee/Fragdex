@@ -12,7 +12,7 @@ export function useSaveRecord() {
   const recordTasteEvent = useAppStore((s) => s.recordTasteEvent);
 
   return useCallback(
-    (record: Omit<GameRecord, "playedAt">): boolean => {
+    (record: Omit<GameRecord, "id" | "playedAt">): boolean => {
       const { best, history } = useAppStore.getState();
       const dailyKey = record.label?.match(/^daily:\d{4}-\d{2}-\d{2}/)?.[0];
       if (
@@ -44,7 +44,11 @@ export function useSaveRecord() {
           ? Math.round((record.score / record.total) * 100)
           : 0;
       const isNewBest = value > (best[record.mode] ?? -1);
-      addRecord({ ...record, playedAt: new Date().toISOString() });
+      addRecord({
+        ...record,
+        id: crypto.randomUUID(),
+        playedAt: new Date().toISOString(),
+      });
       recordTasteEvent({
         type: "game_completed",
         gameMode: record.mode,

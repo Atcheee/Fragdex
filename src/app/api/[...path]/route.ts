@@ -10,6 +10,15 @@ import {
   POST as swapNotePost,
 } from "@/lib/api-handlers/swap-note";
 import { GET as trendsGet } from "@/lib/api-handlers/trends";
+import { GET as authCallbackGet } from "@/lib/api-handlers/auth-callback";
+import {
+  accountDELETE as accountDelete,
+  dataDELETE as accountDataDelete,
+  dataGET as accountDataGet,
+  exportGET as accountExportGet,
+  importPOST as accountImportPost,
+  syncPOST as accountSyncPost,
+} from "@/lib/api-handlers/account";
 
 /**
  * Single catch-all for most API routes so Hobby deployments stay under the
@@ -26,6 +35,9 @@ const GET_HANDLERS: Record<string, Handler> = {
   "fraganty/pool": fragantyPoolGet,
   "swap-note": (request) => swapNoteGet(request),
   trends: trendsGet,
+  "auth/callback": authCallbackGet,
+  "account/data": accountDataGet,
+  "account/export": accountExportGet,
 };
 
 const POST_HANDLERS: Record<string, Handler> = {
@@ -33,6 +45,13 @@ const POST_HANDLERS: Record<string, Handler> = {
   "game/start": (request) => gameStartPost(request),
   scentle: (request) => scentlePost(request),
   "swap-note": (request) => swapNotePost(request),
+  "account/import": accountImportPost,
+  "account/sync": accountSyncPost,
+};
+
+const DELETE_HANDLERS: Record<string, Handler> = {
+  account: accountDelete,
+  "account/data": accountDataDelete,
 };
 
 export function GET(
@@ -47,6 +66,13 @@ export function POST(
   context: { params: Promise<{ path: string[] }> },
 ) {
   return dispatch(request, context, POST_HANDLERS);
+}
+
+export function DELETE(
+  request: NextRequest,
+  context: { params: Promise<{ path: string[] }> },
+) {
+  return dispatch(request, context, DELETE_HANDLERS);
 }
 
 async function dispatch(

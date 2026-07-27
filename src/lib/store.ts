@@ -22,7 +22,16 @@ export interface DailyConnectionsProgress {
   outcome: "won" | "lost" | null;
 }
 
-interface AppState {
+export interface SyncedStoreState {
+  history: GameRecord[];
+  best: Partial<Record<GameModeId, number>>;
+  dailyConnections?: DailyConnectionsProgress;
+  scentleProgress?: ScentleProgress;
+  tasteAnonymousId: string;
+  tasteEvents: TasteEvent[];
+}
+
+interface AppState extends SyncedStoreState {
   apiKey: string;
   history: GameRecord[];
   /** Best score percentage (0–100) per quiz mode, or raw count for naming modes */
@@ -43,6 +52,7 @@ interface AppState {
   rebuildTasteProfile: () => void;
   clearTastePassport: () => void;
   clearHistory: () => void;
+  replaceSyncedState: (state: SyncedStoreState) => void;
 }
 
 const NAMING_MODES: GameModeId[] = ["name-by-house", "name-by-note"];
@@ -99,15 +109,27 @@ export const useAppStore = create<AppState>()(
           };
         }),
       clearHistory: () => set({ history: [], best: {} }),
+      replaceSyncedState: (state) =>
+        set({
+          ...state,
+          tasteProfile: buildTasteProfile(state.tasteEvents),
+        }),
     }),
     {
       name: "this-or-that-storage",
-      version: 2,
+      version: 3,
       migrate: (persisted) => {
         const state = persisted as Partial<AppState>;
         const tasteEvents = state.tasteEvents ?? [];
+        const history = (state.history ?? []).map((record) => ({
+          ...record,
+          id:
+            record.id ??
+            `game_${record.playedAt}_${record.mode}_${Math.random().toString(36).slice(2, 9)}`,
+        }));
         return {
           ...state,
+          history,
           tasteAnonymousId: state.tasteAnonymousId ?? "",
           tasteEvents,
           tasteProfile: buildTasteProfile(tasteEvents),

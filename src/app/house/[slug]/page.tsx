@@ -7,18 +7,19 @@ import {
   type HouseCollectionItem,
 } from "@/components/FragranceCollectionBrowser";
 import { HouseMark } from "@/components/game/HouseMark";
-import { getAllHouseSummaries, getHouseBySlug } from "@/lib/catalog";
+import { getHouseBySlug } from "@/lib/catalog";
 import { allNotes } from "@/lib/types";
 
 interface HousePageProps {
   params: Promise<{ slug: string }>;
 }
 
-// Every house is generated below; do not emit an unused fallback function.
-export const dynamicParams = false;
+// Generate house pages on first request, then refresh their cached output daily.
+export const dynamicParams = true;
+export const revalidate = 86400;
 
-export async function generateStaticParams() {
-  return (await getAllHouseSummaries()).map((house) => ({ slug: house.slug }));
+export function generateStaticParams() {
+  return [];
 }
 
 export async function generateMetadata({

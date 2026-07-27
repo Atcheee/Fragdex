@@ -173,7 +173,7 @@ export function FragranceSearch() {
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
-    }, 180);
+    }, 100);
 
     return () => {
       window.clearTimeout(timer);

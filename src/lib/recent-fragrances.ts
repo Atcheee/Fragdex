@@ -1,3 +1,5 @@
+import { notifyAccountDataChanged } from "./account-data";
+
 export interface RecentFragrance {
   id: string;
   name: string;
@@ -7,7 +9,7 @@ export interface RecentFragrance {
   imageUrl?: string;
 }
 
-const STORAGE_KEY = "tot-recent-searches";
+export const RECENT_STORAGE_KEY = "tot-recent-searches";
 const MAX_RECENT = 9;
 
 function isRecentFragrance(value: unknown): value is RecentFragrance {
@@ -26,7 +28,7 @@ function isRecentFragrance(value: unknown): value is RecentFragrance {
 export function getRecentFragrances(): RecentFragrance[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(RECENT_STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
@@ -43,7 +45,8 @@ export function addRecentFragrance(fragrance: RecentFragrance): void {
     ...getRecentFragrances().filter((item) => item.id !== fragrance.id),
   ].slice(0, MAX_RECENT);
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    window.localStorage.setItem(RECENT_STORAGE_KEY, JSON.stringify(next));
+    notifyAccountDataChanged();
   } catch {
     // Ignore quota / private-mode failures.
   }
@@ -52,8 +55,18 @@ export function addRecentFragrance(fragrance: RecentFragrance): void {
 export function clearRecentFragrances(): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.removeItem(STORAGE_KEY);
+    window.localStorage.removeItem(RECENT_STORAGE_KEY);
+    notifyAccountDataChanged();
   } catch {
     // Ignore storage failures.
   }
+}
+
+export function replaceRecentFragrances(items: RecentFragrance[]): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(
+    RECENT_STORAGE_KEY,
+    JSON.stringify(items.filter(isRecentFragrance).slice(0, MAX_RECENT)),
+  );
+  notifyAccountDataChanged();
 }

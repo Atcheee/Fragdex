@@ -4,11 +4,19 @@ import { notFound } from "next/navigation";
 import { TreeStructure } from "@phosphor-icons/react/dist/ssr";
 import { AccordBars } from "@/components/AccordBars";
 import { CatalogFragranceCard } from "@/components/CatalogFragranceCard";
+import {
+  CloneAlternativesSection,
+  CloneOriginsSection,
+} from "@/components/CloneConnections";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { FragranceBottleImage } from "@/components/FragranceBottleImage";
 import { PerfumePyramid } from "@/components/PerfumePyramid";
 import { UserRatings } from "@/components/UserRatings";
 import { primaryBottleSrc } from "@/lib/bottle-images";
+import {
+  getCloneAlternativesForOriginal,
+  getOriginalsForCatalogClone,
+} from "@/lib/clone-data";
 import { fragranceToTasteFragrance } from "@/lib/taste-passport";
 import {
   getFragranceBySlug,
@@ -65,6 +73,8 @@ export default async function FragrancePage({ params }: FragrancePageProps) {
     getRelatedFragrances(fragrance),
     getFragranceFamilyForFragrance(fragrance.id),
   ]);
+  const cloneAlternatives = getCloneAlternativesForOriginal(fragrance.slug);
+  const cloneOrigins = getOriginalsForCatalogClone(fragrance.slug);
   const heroSrc = primaryBottleSrc(fragrance.imageUrl);
 
   return (
@@ -232,6 +242,7 @@ export default async function FragrancePage({ params }: FragrancePageProps) {
             topNotes={fragrance.topNotes}
             heartNotes={fragrance.heartNotes}
             baseNotes={fragrance.baseNotes}
+            noteProminence={fragrance.noteProminence}
           />
         </section>
       </div>
@@ -259,6 +270,10 @@ export default async function FragrancePage({ params }: FragrancePageProps) {
           </p>
         )}
       </section>
+
+      <CloneAlternativesSection relationships={cloneAlternatives} />
+
+      <CloneOriginsSection relationships={cloneOrigins} />
 
       {related.length > 0 ? (
         <section>

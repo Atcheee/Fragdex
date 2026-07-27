@@ -16,7 +16,11 @@ import {
 } from "@/lib/catalog-limits";
 import { TERM_KIND, searchKey, slugify } from "@/lib/catalog-schema";
 import { expandBrandSearchTerms } from "@/lib/brand-aliases";
-import type { Fragrance, WearOccasion } from "@/lib/types";
+import type {
+  Fragrance,
+  NoteProminence,
+  WearOccasion,
+} from "@/lib/types";
 import { allNotes } from "@/lib/types";
 import { scoreFragranceSimilarity } from "@/lib/fragrance-similarity";
 
@@ -74,9 +78,35 @@ interface FragranceRow {
   top_notes: string;
   heart_notes: string;
   base_notes: string;
+  note_prominence: string | null;
   accords: string;
   description: string;
   wear: string | null;
+}
+
+interface SearchCandidateRow {
+  id: string;
+  slug: string;
+  name: string;
+  name_key: string;
+  house: string;
+  house_key: string;
+  year: number;
+  rating: number;
+  votes: number;
+  image_url: string | null;
+}
+
+interface SearchCandidate extends CatalogSearchResult {
+  nameKey: string;
+  houseKey: string;
+  rating: number;
+  votes: number;
+}
+
+interface RankedSearchCandidate {
+  fragrance: SearchCandidate;
+  score: number;
 }
 
 interface HouseRow {
@@ -92,7 +122,12 @@ interface HouseRow {
 const FRAGRANCE_COLUMNS = `
   f.id, f.slug, f.name, f.house, f.house_slug, f.year, f.rating, f.price,
   f.votes, f.image_url, f.longevity, f.sillage, f.top_notes, f.heart_notes,
-  f.base_notes, f.accords, f.description, f.wear
+  f.base_notes, f.note_prominence, f.accords, f.description, f.wear
+`;
+
+const SEARCH_CANDIDATE_COLUMNS = `
+  f.id, f.slug, f.name, f.name_key, f.house, f.house_key, f.year, f.rating,
+  f.votes, f.image_url
 `;
 
 function toFragrance(row: FragranceRow): CatalogFragrance {
@@ -106,6 +141,13 @@ function toFragrance(row: FragranceRow): CatalogFragrance {
     topNotes: JSON.parse(row.top_notes) as string[],
     heartNotes: JSON.parse(row.heart_notes) as string[],
     baseNotes: JSON.parse(row.base_notes) as string[],
+    ...(row.note_prominence
+      ? {
+          noteProminence: JSON.parse(
+            row.note_prominence,
+          ) as NoteProminence,
+        }
+      : {}),
     accords: JSON.parse(row.accords) as string[],
     description: row.description,
     votes: row.votes,
@@ -117,6 +159,21 @@ function toFragrance(row: FragranceRow): CatalogFragrance {
     ...(row.wear
       ? { wear: JSON.parse(row.wear) as Partial<Record<WearOccasion, number>> }
       : {}),
+  };
+}
+
+function toSearchCandidate(row: SearchCandidateRow): SearchCandidate {
+  return {
+    id: row.id,
+    name: row.name,
+    nameKey: row.name_key,
+    house: row.house,
+    houseKey: row.house_key,
+    year: row.year,
+    rating: row.rating,
+    votes: row.votes,
+    slug: row.slug,
+    ...(row.image_url ? { imageUrl: row.image_url } : {}),
   };
 }
 
@@ -139,7 +196,16 @@ async function selectFragrances(
   return (await all<FragranceRow>(sql, ...parameters)).map(toFragrance);
 }
 
-function toSearchResult(fragrance: CatalogFragrance): CatalogSearchResult {
+async function selectSearchCandidates(
+  sql: string,
+  ...parameters: SqlParameter[]
+): Promise<SearchCandidate[]> {
+  return (await all<SearchCandidateRow>(sql, ...parameters)).map(
+    toSearchCandidate,
+  );
+}
+
+function toSearchResult(fragrance: CatalogSearchResult): CatalogSearchResult {
   return {
     id: fragrance.id,
     name: fragrance.name,
@@ -257,27 +323,78 @@ export async function searchCatalog(
   if (terms.length === 0) return [];
   const expandedQuery = terms.join(" ");
 
-  const candidates = new Map<string, CatalogFragrance>();
-  for (const fragrance of await findSearchCandidates(terms)) {
+  const candidates = new Map<string, SearchCandidate>();
+  const [indexedCandidates, exactCandidates] = await Promise.all([
+    findSearchCandidates(terms),
+    selectSearchCandidates(
+      `SELECT ${SEARCH_CANDIDATE_COLUMNS}
+       FROM fragrance f
+       WHERE f.name_key = ?
+       LIMIT 20`,
+      normalized,
+    ),
+  ]);
+
+  for (const fragrance of indexedCandidates) {
     candidates.set(fragrance.id, fragrance);
   }
   // An exact name match must win even when it is too obscure to survive the
   // popularity-ordered candidate cut above.
-  for (const fragrance of await selectFragrances(
-    `SELECT ${FRAGRANCE_COLUMNS} FROM fragrance f WHERE f.name_key = ? LIMIT 20`,
-    normalized,
-  )) {
+  for (const fragrance of exactCandidates) {
     candidates.set(fragrance.id, fragrance);
   }
 
-  return [...candidates.values()]
+  const resultLimit = Math.max(1, Math.min(limit, 20));
+  const literalMatches = rankSearchCandidates(
+    [...candidates.values()],
+    terms,
+    normalized,
+    expandedQuery,
+    false,
+  );
+  if (literalMatches.length > 0) {
+    return literalMatches
+      .slice(0, resultLimit)
+      .map(({ fragrance }) => toSearchResult(fragrance));
+  }
+
+  // Only pay for the broader trigram query when literal matching found
+  // nothing. This keeps normal searches fast while recovering typoed names.
+  for (const fragrance of await findFuzzySearchCandidates(terms)) {
+    candidates.set(fragrance.id, fragrance);
+  }
+
+  return rankSearchCandidates(
+    [...candidates.values()],
+    terms,
+    normalized,
+    expandedQuery,
+    true,
+  )
+    .slice(0, resultLimit)
+    .map(({ fragrance }) => toSearchResult(fragrance));
+}
+
+function rankSearchCandidates(
+  candidates: SearchCandidate[],
+  terms: string[],
+  normalized: string,
+  expandedQuery: string,
+  allowTypos: boolean,
+): RankedSearchCandidate[] {
+  return candidates
     .map((fragrance) => {
-      const name = searchKey(fragrance.name);
-      const house = searchKey(fragrance.house);
+      const name = fragrance.nameKey;
+      const house = fragrance.houseKey;
       const combined = `${name} ${house}`;
-      if (!terms.every((term) => combined.includes(term))) return null;
 
       let score = 0;
+      for (const term of terms) {
+        const termScore = scoreSearchTerm(term, name, house, allowTypos);
+        if (termScore === null) return null;
+        score += termScore;
+      }
+
       if (name === normalized || name === expandedQuery) score += 1_000;
       else if (name.startsWith(normalized) || name.startsWith(expandedQuery))
         score += 700;
@@ -289,28 +406,106 @@ export async function searchCatalog(
       if (combined.startsWith(normalized) || combined.startsWith(expandedQuery)) {
         score += 180;
       }
+      if (allowTypos) {
+        if (
+          isOneEditAway(name, normalized) ||
+          isOneEditAway(name, expandedQuery)
+        ) {
+          score += 800;
+        } else if (
+          isOneEditAway(combined, normalized) ||
+          isOneEditAway(combined, expandedQuery)
+        ) {
+          score += 650;
+        }
+        if (
+          isOneEditAway(house, normalized) ||
+          isOneEditAway(house, expandedQuery)
+        ) {
+          score += 420;
+        }
+      }
       score += Math.min(Math.log10((fragrance.votes ?? 0) + 1) * 30, 150);
       score += fragrance.rating > 0 ? fragrance.rating * 2 : 0;
 
       return { fragrance, score };
     })
     .filter(
-      (result): result is { fragrance: CatalogFragrance; score: number } =>
-        result !== null,
+      (result): result is RankedSearchCandidate => result !== null,
     )
     .sort(
       (a, b) =>
         b.score - a.score ||
         (b.fragrance.votes ?? 0) - (a.fragrance.votes ?? 0) ||
         a.fragrance.name.localeCompare(b.fragrance.name),
-    )
-    .slice(0, Math.max(1, Math.min(limit, 20)))
-    .map(({ fragrance }) => toSearchResult(fragrance));
+    );
+}
+
+function scoreSearchTerm(
+  term: string,
+  name: string,
+  house: string,
+  allowTypos: boolean,
+): number | null {
+  if (name.includes(term)) return 180;
+  if (house.includes(term)) return 110;
+  if (!allowTypos || term.length < 3) return null;
+
+  if (name.split(" ").some((word) => isOneEditAway(word, term))) return 120;
+  if (house.split(" ").some((word) => isOneEditAway(word, term))) return 70;
+  return null;
+}
+
+/**
+ * One insertion, deletion, substitution, or adjacent transposition.
+ * Returning false for larger differences prevents fuzzy results becoming
+ * noisy while covering normal single-key typing mistakes.
+ */
+function isOneEditAway(candidate: string, query: string): boolean {
+  if (candidate === query || Math.abs(candidate.length - query.length) > 1) {
+    return false;
+  }
+
+  if (candidate.length === query.length) {
+    const mismatches: number[] = [];
+    for (let index = 0; index < candidate.length; index += 1) {
+      if (candidate[index] !== query[index]) {
+        mismatches.push(index);
+        if (mismatches.length > 2) return false;
+      }
+    }
+    if (mismatches.length === 1) return true;
+    if (mismatches.length !== 2) return false;
+    const [first, second] = mismatches;
+    return (
+      second === first + 1 &&
+      candidate[first] === query[second] &&
+      candidate[second] === query[first]
+    );
+  }
+
+  const shorter = candidate.length < query.length ? candidate : query;
+  const longer = candidate.length < query.length ? query : candidate;
+  let shorterIndex = 0;
+  let longerIndex = 0;
+  let skipped = false;
+
+  while (shorterIndex < shorter.length && longerIndex < longer.length) {
+    if (shorter[shorterIndex] === longer[longerIndex]) {
+      shorterIndex += 1;
+      longerIndex += 1;
+    } else {
+      if (skipped) return false;
+      skipped = true;
+      longerIndex += 1;
+    }
+  }
+  return true;
 }
 
 async function findSearchCandidates(
   terms: string[],
-): Promise<CatalogFragrance[]> {
+): Promise<SearchCandidate[]> {
   // The trigram tokenizer needs at least three characters; shorter queries
   // fall back to an indexed-free scan, which is rare and still sub-second.
   const indexedTerm = [...terms]
@@ -322,8 +517,8 @@ async function findSearchCandidates(
     .join(" AND ");
 
   if (indexedTerm) {
-    return selectFragrances(
-      `SELECT ${FRAGRANCE_COLUMNS} FROM fragrance f
+    return selectSearchCandidates(
+      `SELECT ${SEARCH_CANDIDATE_COLUMNS} FROM fragrance f
        WHERE f.rowid IN (SELECT rowid FROM fragrance_search WHERE fragrance_search MATCH ?)
        ${conditions ? `AND ${conditions}` : ""}
        ORDER BY f.votes DESC
@@ -333,13 +528,56 @@ async function findSearchCandidates(
     );
   }
 
-  return selectFragrances(
-    `SELECT ${FRAGRANCE_COLUMNS} FROM fragrance f
+  return selectSearchCandidates(
+    `SELECT ${SEARCH_CANDIDATE_COLUMNS} FROM fragrance f
      WHERE ${conditions || "1"}
      ORDER BY f.votes DESC
      LIMIT ${SEARCH_CANDIDATE_LIMIT}`,
     ...filters,
   );
+}
+
+async function findFuzzySearchCandidates(
+  terms: string[],
+): Promise<SearchCandidate[]> {
+  const trigrams = new Set<string>();
+
+  for (const term of terms) {
+    addTrigrams(term, trigrams);
+    // A transposition can destroy every trigram in a four-letter word.
+    // Adding adjacent-swap variants keeps that common typo discoverable.
+    for (let index = 0; index < term.length - 1; index += 1) {
+      const swapped =
+        term.slice(0, index) +
+        term[index + 1] +
+        term[index] +
+        term.slice(index + 2);
+      addTrigrams(swapped, trigrams);
+    }
+  }
+
+  if (trigrams.size === 0) return [];
+  const fuzzyQuery = [...trigrams]
+    .slice(0, 64)
+    .map((trigram) => `"${trigram}"`)
+    .join(" OR ");
+
+  return selectSearchCandidates(
+    `SELECT ${SEARCH_CANDIDATE_COLUMNS} FROM fragrance f
+     WHERE f.rowid IN (
+       SELECT rowid FROM fragrance_search
+       WHERE fragrance_search MATCH ?
+       ORDER BY rank
+       LIMIT ${SEARCH_CANDIDATE_LIMIT}
+     )`,
+    fuzzyQuery,
+  );
+}
+
+function addTrigrams(value: string, trigrams: Set<string>): void {
+  for (let index = 0; index <= value.length - 3; index += 1) {
+    trigrams.add(value.slice(index, index + 3));
+  }
 }
 
 /**

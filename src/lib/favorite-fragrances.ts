@@ -1,3 +1,5 @@
+import { notifyAccountDataChanged } from "./account-data";
+
 export interface FavoriteFragrance {
   id: string;
   name: string;
@@ -10,7 +12,7 @@ export interface FavoriteFragrance {
   savedAt: string;
 }
 
-const STORAGE_KEY = "tot-favorite-fragrances";
+export const FAVORITES_STORAGE_KEY = "tot-favorite-fragrances";
 const MAX_FAVORITES = 100;
 
 function isFavoriteFragrance(value: unknown): value is FavoriteFragrance {
@@ -32,7 +34,7 @@ function isFavoriteFragrance(value: unknown): value is FavoriteFragrance {
 export function getFavoriteFragrances(): FavoriteFragrance[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(FAVORITES_STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
@@ -61,7 +63,8 @@ export function toggleFavoriteFragrance(
       ].slice(0, MAX_FAVORITES);
 
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    window.localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(next));
+    notifyAccountDataChanged();
   } catch {
     // Ignore quota / private-mode failures.
   }
@@ -72,8 +75,18 @@ export function toggleFavoriteFragrance(
 export function clearFavoriteFragrances(): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.removeItem(STORAGE_KEY);
+    window.localStorage.removeItem(FAVORITES_STORAGE_KEY);
+    notifyAccountDataChanged();
   } catch {
     // Ignore storage failures.
   }
+}
+
+export function replaceFavoriteFragrances(items: FavoriteFragrance[]): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(
+    FAVORITES_STORAGE_KEY,
+    JSON.stringify(items.filter(isFavoriteFragrance).slice(0, MAX_FAVORITES)),
+  );
+  notifyAccountDataChanged();
 }

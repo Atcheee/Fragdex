@@ -20,6 +20,7 @@ const GROUPS = [
       "has-accord",
       "which-house",
       "guess-description",
+      "clone-match",
       "fake-or-real",
     ],
   },

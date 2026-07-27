@@ -139,6 +139,7 @@ export function YesNoRevealContent({
           topNotes={fragrance.topNotes}
           heartNotes={fragrance.heartNotes}
           baseNotes={fragrance.baseNotes}
+          noteProminence={fragrance.noteProminence}
           highlight={subject}
         />
       ) : (
@@ -298,6 +299,7 @@ export function MultipleChoiceRevealContent({
             topNotes={fragrance.topNotes}
             heartNotes={fragrance.heartNotes}
             baseNotes={fragrance.baseNotes}
+            noteProminence={fragrance.noteProminence}
           />
         </>
       ) : (

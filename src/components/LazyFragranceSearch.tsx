@@ -1,16 +1,7 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
-
-const FragranceSearch = dynamic(
-  () =>
-    import("@/components/FragranceSearch").then((mod) => mod.FragranceSearch),
-  {
-    ssr: false,
-    loading: () => <SearchPlaceholder />,
-  },
-);
+import { FragranceSearch } from "@/components/FragranceSearch";
 
 export function LazyFragranceSearch() {
   const [enabled, setEnabled] = useState(false);

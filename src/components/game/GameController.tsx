@@ -15,6 +15,7 @@ import type { PreparedConnectionPuzzle } from "@/lib/engines/connections";
 import type { NamingChallenge } from "@/lib/engines/naming";
 import type { FakeOrRealRound } from "@/lib/engines/fake-or-real";
 import type { PriceLadderDifficulty } from "@/lib/engines/price-ladder";
+import type { CloneMatchEntry } from "@/lib/engines/clone-match";
 import type { ConnectionsVariant } from "./ConnectionsGame";
 
 const ThisOrThatGame = dynamic(
@@ -97,6 +98,10 @@ const FragranceBingoGame = dynamic(
   () => import("./FragranceBingoGame").then((m) => m.FragranceBingoGame),
   { loading: GameChunkFallback },
 );
+const CloneMatchGame = dynamic(
+  () => import("./CloneMatchGame").then((m) => m.CloneMatchGame),
+  { loading: GameChunkFallback },
+);
 
 function GameChunkFallback() {
   return (
@@ -119,9 +124,10 @@ const DISCOVERY_POOL_SIZE = 800;
 
 interface GameControllerProps {
   meta: GameModeMeta;
+  cloneEntries?: CloneMatchEntry[];
 }
 
-export function GameController({ meta }: GameControllerProps) {
+export function GameController({ meta, cloneEntries }: GameControllerProps) {
   const apiKey = useAppStore((s) => s.apiKey);
   const history = useAppStore((s) => s.history);
   const [phase, setPhase] = useState<"setup" | "loading" | "playing" | "error">(
@@ -177,6 +183,15 @@ export function GameController({ meta }: GameControllerProps) {
     setChallengeDateKey(nextDateKey);
 
     try {
+      if (meta.kind === "clone-match") {
+        if (!cloneEntries || cloneEntries.length < 4) {
+          throw new Error("Clone data is unavailable.");
+        }
+        setGameKey((key) => key + 1);
+        setPhase("playing");
+        return;
+      }
+
       const poolCount =
         meta.kind === "discovery"
           ? DISCOVERY_POOL_SIZE
@@ -223,6 +238,7 @@ export function GameController({ meta }: GameControllerProps) {
     apiKey,
     connectionsVariant,
     challengeVariant,
+    cloneEntries,
   ]);
 
   if (phase === "setup" || phase === "error") {
@@ -553,6 +569,14 @@ export function GameController({ meta }: GameControllerProps) {
           pool={pool}
           variant={challengeVariant}
           dateKey={challengeDateKey}
+        />
+      )}
+      {meta.kind === "clone-match" && cloneEntries && (
+        <CloneMatchGame
+          key={gameKey}
+          {...common}
+          entries={cloneEntries}
+          rounds={rounds}
         />
       )}
     </div>

@@ -242,6 +242,7 @@ export function NotePyramidGame({
             topNotes={challenge.fragrance.topNotes}
             heartNotes={challenge.fragrance.heartNotes}
             baseNotes={challenge.fragrance.baseNotes}
+            noteProminence={challenge.fragrance.noteProminence}
           />
         </div>
 

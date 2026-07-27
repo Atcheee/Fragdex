@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  useCallback,
   useEffect,
   useId,
   useRef,
@@ -18,6 +17,7 @@ import {
   CaretDown,
   ChartBar,
   Compass,
+  Copy,
   Heart,
   IdentificationCard,
   MapTrifold,
@@ -54,6 +54,13 @@ const GROUPS: NavGroup[] = [
         isActive: (pathname) =>
           pathname.startsWith("/fragrances") ||
           pathname.startsWith("/fragrance/"),
+      },
+      {
+        href: "/clones",
+        label: "Clones",
+        icon: Copy,
+        isActive: (pathname) =>
+          pathname.startsWith("/clones") || pathname.startsWith("/clone/"),
       },
       {
         href: "/houses",
@@ -240,13 +247,11 @@ function NavDropdown({
 
 export function PrimaryNav() {
   const pathname = usePathname();
-  const [openId, setOpenId] = useState<string | null>(null);
-
-  const close = useCallback(() => setOpenId(null), []);
-
-  useEffect(() => {
-    close();
-  }, [pathname, close]);
+  const [openMenu, setOpenMenu] = useState<{
+    id: string;
+    pathname: string;
+  } | null>(null);
+  const openId = openMenu?.pathname === pathname ? openMenu.id : null;
 
   return (
     <nav
@@ -260,7 +265,9 @@ export function PrimaryNav() {
             group={group}
             pathname={pathname}
             open={openId === group.id}
-            onOpenChange={(next) => setOpenId(next ? group.id : null)}
+            onOpenChange={(next) =>
+              setOpenMenu(next ? { id: group.id, pathname } : null)
+            }
             align={
               index === 0
                 ? "start"

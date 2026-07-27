@@ -8,6 +8,7 @@ import {
   type KeyboardEvent,
 } from "react";
 import type { Fragrance, GameModeMeta } from "@/lib/types";
+import { notifyAccountDataChanged } from "@/lib/account-data";
 import {
   calculateOddOneOutPoints,
   createOddOneOutPracticeSeed,
@@ -168,6 +169,7 @@ export function OddOneOutGame({
     };
     try {
       window.localStorage.setItem(dailyStorageKey, JSON.stringify(state));
+      notifyAccountDataChanged();
     } catch {
       // Daily gameplay still works when storage is unavailable or full.
     }
@@ -580,6 +582,7 @@ function saveLifetimeStats(
     };
     window.localStorage.setItem(STATS_STORAGE_KEY, JSON.stringify(next));
     if (dailyMarker) window.localStorage.setItem(dailyMarker, "1");
+    notifyAccountDataChanged();
   } catch {
     // Storage denial must not block completion.
   }

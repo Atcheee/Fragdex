@@ -80,7 +80,10 @@ Requires `BLOB_READ_WRITE_TOKEN` (and Turso env vars to rewrite `image_url`).
 - **The Scent Base scraper**: `npx tsx scripts/scrape-scentbase.ts --designers Afnan,Dior --merge` imports brand and perfume pages without using Fragrantica. `--popular --limit-designers 5 --merge` processes well-known houses first. Every perfume must load a real bottle image on both its brand listing and detail page before it can enter the cache or catalog; failed bottles are reported and skipped. Re-runs reuse `scripts/scentbase-cache/`. Add `--refresh` to recheck pages and images.
 - **Fraganty API** (optional): request a free key at api@fraganty.ai (docs: [fraganty.ai/api-docs](https://fraganty.ai/api-docs)) and paste it on the Settings page. Compatible modes (Higher Rating, Contains This Note, Has This Main Accord, Find Your Favorite) then draw random pools from Fraganty's 100k+ perfume database via a server-side proxy (`src/app/api/fraganty/pool/route.ts`), falling back to the built-in catalog on any error. Modes that need prices, descriptions or the full local catalog (naming games, house decoys) always use the built-in data.
 
-The catalog is read-only at runtime; game history, personal bests and the API key are persisted in `localStorage` (zustand `persist`), so there is still no server-side user state.
+The catalog is read-only at runtime. Guests keep progress locally. Signed-in
+users keep the same local-first experience while account progress syncs to
+Supabase Postgres. The optional Fraganty API key always remains device-local and
+is never included in account sync.
 
 Scentle answers are selected deterministically from a recognizable catalog subset using the UTC date. Guess scoring stays server-side so the answer is not included in the initial browser payload. Its normalized score weights notes (36%), accords (24%), year (14%), house (10%), rating (8%), and vote-count popularity (8%).
 
@@ -89,7 +92,22 @@ Scentle answers are selected deterministically from a recognizable catalog subse
 - The Fraganty proxy route is rate limited to 10 requests/minute per IP (in-memory fixed window, `src/lib/rate-limit.ts`) and answers 429 with `Retry-After` when exceeded. On multi-instance/serverless deployments the limit is per instance; swap in a shared store (e.g. Upstash Redis) if you need strict global limits.
 - Upstream calls have 8s timeouts, the fan-out is capped at 31 requests, API keys are format-validated before forwarding, and perfume slugs from upstream responses are pattern-checked and URL-encoded before being used in URLs.
 - Standard security headers (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, and a CSP covering `object-src`, `base-uri`, `frame-ancestors`) are set globally in `next.config.ts`.
-- The API key is stored in `localStorage` by design (no backend accounts); it is only ever sent to this app's own proxy route.
+- The optional Fraganty API key is stored only in `localStorage`; it is sent only
+  to this app's proxy route and is excluded from account sync and exports.
+- Account tables use Supabase Row Level Security (`auth.uid() = user_id`),
+  cascading deletion, server-side session revalidation, and idempotent sync
+  operations.
+
+## Accounts and progress sync
+
+Guests can use every game without logging in. Optional Supabase Auth adds
+verified email/password, one-time email login, Google, GitHub, Microsoft,
+Discord, and Facebook login. Guest data is never imported without an explicit
+Import/Keep separate prompt.
+
+Production provisioning, Brevo SMTP, OAuth callbacks, environment variables,
+and launch checks are in
+[`docs/authentication-setup.md`](docs/authentication-setup.md).
 
 ## Theming
 
