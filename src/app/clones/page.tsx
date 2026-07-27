@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { MagnifyingGlass } from "@phosphor-icons/react/dist/ssr";
 import { CloneCard } from "@/components/CloneCard";
@@ -10,7 +10,7 @@ import {
 import { getFragrancesBySlugs } from "@/lib/catalog";
 
 export const metadata: Metadata = {
-  title: "Fragrance clones and affordable alternatives — Scent Games",
+  title: "Fragrance clones and affordable alternatives — Fragdex",
   description:
     "Browse fragrance clones, similarity estimates, listed prices, savings, and their designer or niche originals.",
   alternates: { canonical: "/clones" },

@@ -5,7 +5,7 @@ import { MODES } from "@/lib/modes";
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ??
-  "https://scent-games.vercel.app";
+  "https://fragdex.vercel.app";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const lastModified = new Date();

@@ -196,8 +196,10 @@ export function CloneAccuracyVote({
 
 export function CloneCommunityFact({
   relationshipId,
+  spacious = false,
 }: {
   relationshipId: string;
+  spacious?: boolean;
 }) {
   const { user, loading: authLoading } = useAuth();
   const [label, setLabel] = useState("…");
@@ -250,11 +252,21 @@ export function CloneCommunityFact({
   }, [relationshipId]);
 
   return (
-    <div className="rounded-xl border border-border bg-background p-3">
+    <div
+      className={`rounded-xl border border-border bg-background ${
+        spacious ? "p-4" : "p-3"
+      }`}
+    >
       <dt className="text-[0.65rem] uppercase tracking-wide text-muted">
         Community
       </dt>
-      <dd className="mt-1 text-sm font-semibold tabular-nums">{label}</dd>
+      <dd
+        className={`mt-1 font-semibold tabular-nums ${
+          spacious ? "text-base" : "text-sm"
+        }`}
+      >
+        {label}
+      </dd>
       <p className="mt-1 text-[0.65rem] text-muted">{hint}</p>
     </div>
   );

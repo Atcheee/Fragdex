@@ -1,6 +1,6 @@
-# Scent Games
+# Fragdex
 
-A fragrance knowledge and discovery app with twenty-two game modes, built with Next.js (App Router), TypeScript and Tailwind CSS.
+A fragrance catalog, comparison, and discovery platform with twenty-two game modes — built with Next.js (App Router), TypeScript and Tailwind CSS.
 
 ## Game modes
 

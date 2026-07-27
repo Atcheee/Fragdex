@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TreeStructure } from "@phosphor-icons/react/dist/ssr";
@@ -51,7 +51,7 @@ export async function generateMetadata({
       : undefined;
 
   return {
-    title: `${fragrance.name} by ${fragrance.house} — Scent Games`,
+    title: `${fragrance.name} by ${fragrance.house} — Fragdex`,
     description,
     alternates: { canonical: `/fragrance/${fragrance.slug}` },
     openGraph: {

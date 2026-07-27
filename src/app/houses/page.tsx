@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Buildings, MagnifyingGlass, Star } from "@phosphor-icons/react/dist/ssr";
 import { HouseMark } from "@/components/game/HouseMark";
@@ -15,7 +15,7 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 export async function generateMetadata(): Promise<Metadata> {
   const browseMeta = await getBrowseMeta();
   return {
-    title: "Designer houses — Scent Games",
+    title: "Designer houses — Fragdex",
     description: `Explore ${browseMeta.houseCount.toLocaleString("en-US")} fragrance designer houses and browse their collections, signature accords, ratings, and release years.`,
     alternates: { canonical: "/houses" },
   };

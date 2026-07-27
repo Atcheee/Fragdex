@@ -1,7 +1,7 @@
-﻿import { ImageResponse } from "next/og";
+import { ImageResponse } from "next/og";
 import { BrandMark } from "@/components/BrandMark";
 
-export const alt = "Scent Games";
+export const alt = "Fragdex";
 export const size = {
   width: 1200,
   height: 630,
@@ -53,7 +53,7 @@ export default function OpenGraphImage() {
               color: "#f59e0b",
             }}
           >
-            Scent Games
+            Fragdex
           </div>
         </div>
 
@@ -67,7 +67,7 @@ export default function OpenGraphImage() {
               maxWidth: 900,
             }}
           >
-            Trust your nose.
+            Your fragrance index.
           </div>
           <div
             style={{
@@ -77,8 +77,8 @@ export default function OpenGraphImage() {
               lineHeight: 1.35,
             }}
           >
-            Twenty-two fragrance games — ratings, prices, notes, accords,
-            houses and more.
+            Catalog, compare, play, and explore notes, accords, houses, and
+            clones.
           </div>
         </div>
       </div>

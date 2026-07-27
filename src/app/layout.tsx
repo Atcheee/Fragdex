@@ -8,33 +8,34 @@ import { AccountSyncProvider } from "@/components/auth/AccountSyncProvider";
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ??
-  "https://scent-games.vercel.app";
+  "https://fragdex.vercel.app";
 
-const title = "Scent Games";
+const title = "Fragdex";
 const description =
-  "Test your fragrance knowledge: ratings, prices, notes, accords, houses and more.";
+  "Browse a huge fragrance catalog, compare bottles, play scent games, and explore notes, accords, houses, and clones.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title,
   description,
-  applicationName: "Scent Games",
+  applicationName: "Fragdex",
   keywords: [
     "fragrance",
     "perfume",
-    "scent games",
-    "this or that",
+    "fragdex",
+    "fragrance catalog",
+    "perfume comparison",
     "scent quiz",
     "perfume game",
     "fragrance notes",
     "accords",
     "perfume houses",
+    "fragrance clones",
     "find your fragrance",
-    "perfume recommendation",
   ],
-  authors: [{ name: "Scent Games" }],
-  creator: "Scent Games",
-  publisher: "Scent Games",
+  authors: [{ name: "Fragdex" }],
+  creator: "Fragdex",
+  publisher: "Fragdex",
   robots: {
     index: true,
     follow: true,
@@ -53,7 +54,7 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: "/",
-    siteName: "Scent Games",
+    siteName: "Fragdex",
     title,
     description,
   },

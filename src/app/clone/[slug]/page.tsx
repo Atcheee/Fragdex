@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -49,7 +49,7 @@ export async function generateMetadata({
   } is listed as an affordable alternative to ${original}. Compare similarity, price, and savings estimates.`;
 
   return {
-    title: `${profile.name} fragrance clone — Scent Games`,
+    title: `${profile.name} fragrance clone — Fragdex`,
     description,
     alternates: { canonical: `/clone/${profile.slug}` },
     openGraph: {
@@ -223,13 +223,13 @@ export default async function ClonePage({ params }: ClonePageProps) {
           >
             What {profile.name} is inspired by
           </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-muted sm:text-base">
             Source lists can connect one clone with more than one original.
             Each comparison below shows its own source similarity, community
             accuracy votes, and savings estimate.
           </p>
         </div>
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-5">
           {profile.relationships.map((relationship, index) => (
             <OriginalCard
               key={relationship.id}
@@ -359,33 +359,33 @@ function OriginalCard({
 }) {
   return (
     <article className="overflow-hidden rounded-2xl border border-border bg-card">
-      <div className="grid sm:grid-cols-[10rem_minmax(0,1fr)]">
-        <div className="bottle-studio flex min-h-52 items-end justify-center px-4 pb-5 pt-6 sm:min-h-full">
+      <div className="grid md:grid-cols-[16rem_minmax(0,1fr)] lg:grid-cols-[18rem_minmax(0,1fr)]">
+        <div className="bottle-studio flex min-h-64 items-center justify-center px-5 py-7 md:min-h-full">
           <FragranceBottleImage
             imageUrl={fragrance?.imageUrl}
             alt={`${relationship.originalName} bottle`}
-            width={210}
-            height={280}
-            sizes="(max-width: 640px) 55vw, 145px"
-            className="max-h-44 w-auto max-w-full object-contain"
+            width={280}
+            height={380}
+            sizes="(max-width: 768px) 55vw, 260px"
+            className="max-h-56 w-auto max-w-full object-contain md:max-h-72"
             placeholderClassName="h-28 w-auto text-stone-400 opacity-35"
             stage={false}
             preferCutout
           />
         </div>
-        <div className="min-w-0 p-5 sm:p-6">
+        <div className="min-w-0 p-6 sm:p-8">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
             Original fragrance {position} of {total}
           </p>
           {relationship.originalCatalogSlug ? (
             <Link
               href={`/fragrance/${relationship.originalCatalogSlug}`}
-              className="mt-1.5 block font-display text-xl font-semibold hover:text-accent"
+              className="mt-1.5 block font-display text-2xl font-semibold hover:text-accent sm:text-3xl"
             >
               {relationship.originalName}
             </Link>
           ) : (
-            <h3 className="mt-1.5 font-display text-xl font-semibold">
+            <h3 className="mt-1.5 font-display text-2xl font-semibold sm:text-3xl">
               {relationship.originalName}
             </h3>
           )}
@@ -393,7 +393,7 @@ function OriginalCard({
             <p className="mt-1 text-sm text-muted">by {fragrance.house}</p>
           ) : null}
 
-          <dl className="mt-5 grid grid-cols-2 gap-3">
+          <dl className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             <Fact
               label="Source similarity"
               value={
@@ -402,8 +402,12 @@ function OriginalCard({
                   : "Not rated"
               }
               hint="Clone databases"
+              spacious
             />
-            <CloneCommunityFact relationshipId={relationship.id} />
+            <CloneCommunityFact
+              relationshipId={relationship.id}
+              spacious
+            />
             <Fact
               label="Clone price"
               value={
@@ -411,6 +415,7 @@ function OriginalCard({
                   ? formatClonePrice(relationship.clonePrice)
                   : "Not listed"
               }
+              spacious
             />
             <Fact
               label="Original price"
@@ -419,6 +424,7 @@ function OriginalCard({
                   ? formatClonePrice(relationship.originalPrice)
                   : "Not listed"
               }
+              spacious
             />
             <Fact
               label="Savings"
@@ -427,6 +433,8 @@ function OriginalCard({
                   ? `${relationship.savingsPercent}% less`
                   : "Not listed"
               }
+              spacious
+              className="col-span-2 sm:col-span-1"
             />
           </dl>
 
@@ -435,7 +443,7 @@ function OriginalCard({
           ) : null}
 
           {relationship.review ? (
-            <div className="mt-5 rounded-xl bg-background p-4">
+            <div className="mt-5 rounded-xl bg-background p-4 sm:p-5">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted">
                 Source review
               </p>
@@ -445,11 +453,11 @@ function OriginalCard({
             </div>
           ) : null}
 
-          <div className="mt-5 flex flex-wrap gap-3">
+          <div className="mt-6 flex flex-wrap gap-3">
             {relationship.originalCatalogSlug ? (
               <Link
                 href={`/fragrance/${relationship.originalCatalogSlug}`}
-                className="inline-flex min-h-10 items-center rounded-full bg-accent px-4 text-sm font-semibold text-[#17120a]"
+                className="inline-flex min-h-11 items-center rounded-full bg-accent px-5 text-sm font-semibold text-[#17120a]"
               >
                 Original profile
               </Link>
@@ -459,7 +467,7 @@ function OriginalCard({
                 href={relationship.dealUrl}
                 target="_blank"
                 rel="nofollow sponsored noopener noreferrer"
-                className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-border px-4 text-sm font-semibold hover:border-accent hover:bg-card-hover"
+                className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border px-5 text-sm font-semibold hover:border-accent hover:bg-card-hover"
               >
                 Source deal
                 <ArrowSquareOut aria-hidden size={14} />
@@ -476,17 +484,31 @@ function Fact({
   label,
   value,
   hint,
+  spacious = false,
+  className,
 }: {
   label: string;
   value: string;
   hint?: string;
+  spacious?: boolean;
+  className?: string;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-background p-3">
+    <div
+      className={`rounded-xl border border-border bg-background ${
+        spacious ? "p-4" : "p-3"
+      }${className ? ` ${className}` : ""}`}
+    >
       <dt className="text-[0.65rem] uppercase tracking-wide text-muted">
         {label}
       </dt>
-      <dd className="mt-1 text-sm font-semibold tabular-nums">{value}</dd>
+      <dd
+        className={`mt-1 font-semibold tabular-nums ${
+          spacious ? "text-base" : "text-sm"
+        }`}
+      >
+        {value}
+      </dd>
       {hint ? (
         <p className="mt-1 text-[0.65rem] text-muted">{hint}</p>
       ) : null}
