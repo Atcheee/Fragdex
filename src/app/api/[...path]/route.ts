@@ -28,6 +28,7 @@ import {
   GET as fragranceVotesGet,
   POST as fragranceVotesPost,
 } from "@/lib/api-handlers/fragrance-votes";
+import { GET as atlasGet } from "@/lib/api-handlers/atlas";
 
 /**
  * Single catch-all for most API routes so Hobby deployments stay under the
@@ -39,6 +40,7 @@ export const dynamic = "force-dynamic";
 type Handler = (request: NextRequest) => Response | Promise<Response>;
 
 const GET_HANDLERS: Record<string, Handler> = {
+  atlas: atlasGet,
   "catalog/popular": (request) => catalogPopularGet(request),
   "catalog/search": (request) => catalogSearchGet(request),
   "fraganty/pool": fragantyPoolGet,

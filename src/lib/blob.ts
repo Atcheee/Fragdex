@@ -30,6 +30,21 @@ export async function putPublicBlob(
   });
 }
 
+/** Upload a private object (e.g. fragrance atlas JSON) to the connected Blob store. */
+export async function putPrivateBlob(
+  pathname: string,
+  body: Buffer | Blob | ReadableStream | string,
+  contentType?: string,
+): Promise<PutBlobResult> {
+  return put(pathname, body, {
+    access: "private",
+    token: blobToken(),
+    ...(contentType ? { contentType } : {}),
+    allowOverwrite: true,
+    addRandomSuffix: false,
+  });
+}
+
 export async function deleteBlob(urlOrPathname: string): Promise<void> {
   await del(urlOrPathname, { token: blobToken() });
 }

@@ -35,7 +35,7 @@ Copy `.env.example` to `.env.local` and set Turso + Supabase values for a full l
 
 The proprietary catalog source, scrape/build tooling, and database migrations are **not** published in this repository. Production deploys do not regenerate the catalog at build time.
 
-Optional atlas map data can be served from a private HTTPS URL via `NEXT_PUBLIC_ATLAS_URL` (for example Vercel Blob). Locally you may keep a generated file at `public/data/fragrance-atlas.json` (gitignored).
+Optional atlas map data is stored in a **private** Vercel Blob object and served through `/api/atlas` (with a local `public/data/fragrance-atlas.json` fallback for development).
 
 ## Data and accounts
 
