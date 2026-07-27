@@ -528,13 +528,25 @@ async function findSearchCandidates(
     .join(" AND ");
 
   if (indexedTerm) {
-    return selectSearchCandidates(
+    const indexed = await selectSearchCandidates(
       `SELECT ${SEARCH_CANDIDATE_COLUMNS} FROM fragrance f
        WHERE f.rowid IN (SELECT rowid FROM fragrance_search WHERE fragrance_search MATCH ?)
        ${conditions ? `AND ${conditions}` : ""}
        ORDER BY f.votes DESC
        LIMIT ${SEARCH_CANDIDATE_LIMIT}`,
       `"${indexedTerm}"`,
+      ...filters,
+    );
+    if (indexed.length > 0) return indexed;
+
+    // FTS empty/unbuilt (e.g. after a partial Turso push) — still search.
+    return selectSearchCandidates(
+      `SELECT ${SEARCH_CANDIDATE_COLUMNS} FROM fragrance f
+       WHERE instr(f.name_key || ' ' || f.house_key, ?) > 0
+       ${conditions ? `AND ${conditions}` : ""}
+       ORDER BY f.votes DESC
+       LIMIT ${SEARCH_CANDIDATE_LIMIT}`,
+      indexedTerm,
       ...filters,
     );
   }

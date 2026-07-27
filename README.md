@@ -1,6 +1,6 @@
-# This or That — Fragrance Games
+# Scent Games
 
-A fragrance knowledge and discovery app with nineteen game modes, built with Next.js (App Router), TypeScript and Tailwind CSS.
+A fragrance knowledge and discovery app with twenty-two game modes, built with Next.js (App Router), TypeScript and Tailwind CSS.
 
 ## Game modes
 
@@ -103,7 +103,8 @@ Scentle answers are selected deterministically from a recognizable catalog subse
 Guests can use every game without logging in. Optional Supabase Auth adds
 verified email/password, one-time email login, Google, GitHub, Microsoft,
 Discord, and Facebook login. Guest data is never imported without an explicit
-Import/Keep separate prompt.
+Import/Keep separate prompt. Clone pages also accept signed-in
+accuracy votes (`/api/clone/votes`) once the clone-votes migration is applied.
 
 Production provisioning, Brevo SMTP, OAuth callbacks, environment variables,
 and launch checks are in

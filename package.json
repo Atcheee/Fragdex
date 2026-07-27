@@ -1,5 +1,5 @@
 {
-  "name": "this-or-that-fragrance-games",
+  "name": "scent-games",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -8,6 +8,7 @@
     "generate:atlas": "tsx scripts/generate-fragrance-atlas.ts",
     "refresh:clones": "tsx scripts/import-clone-data.ts",
     "push:catalog": "node --env-file=.env.local --import tsx scripts/push-catalog-to-turso.ts",
+    "rebuild:search": "node --env-file=.env.local --import tsx scripts/rebuild-fragrance-search.ts",
     "upload:bottle": "node --env-file=.env.local --import tsx scripts/upload-bottle-image.ts",
     "predev": "node scripts/ensure-catalog-db.mjs",
     "dev": "next dev",

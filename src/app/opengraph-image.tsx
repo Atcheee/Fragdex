@@ -1,7 +1,7 @@
-import { ImageResponse } from "next/og";
+﻿import { ImageResponse } from "next/og";
 import { BrandMark } from "@/components/BrandMark";
 
-export const alt = "This or That — Fragrance Games";
+export const alt = "Scent Games";
 export const size = {
   width: 1200,
   height: 630,
@@ -53,7 +53,7 @@ export default function OpenGraphImage() {
               color: "#f59e0b",
             }}
           >
-            This or That
+            Scent Games
           </div>
         </div>
 
@@ -67,7 +67,7 @@ export default function OpenGraphImage() {
               maxWidth: 900,
             }}
           >
-            Fragrance Games
+            Trust your nose.
           </div>
           <div
             style={{
@@ -77,8 +77,8 @@ export default function OpenGraphImage() {
               lineHeight: 1.35,
             }}
           >
-            Test your nose-knowledge: ratings, prices, notes, accords, houses
-            and more.
+            Twenty-two fragrance games — ratings, prices, notes, accords,
+            houses and more.
           </div>
         </div>
       </div>

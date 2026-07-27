@@ -1,4 +1,19 @@
-import type { ReactNode } from "react";
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState, useEffectEvent, type ReactNode } from "react";
+import { useAuth } from "@/components/auth/AuthProvider";
+import {
+  LONGEVITY_OPTIONS,
+  OCCASION_COLORS,
+  SENTIMENT_COLORS,
+  SILLAGE_OPTIONS,
+  longevityOption,
+  sillageOption,
+  type FragranceVoteStats,
+  type OccasionId,
+  type SentimentId,
+} from "@/lib/fragrance-votes";
 import {
   deriveSentimentBuckets,
   deriveWearBuckets,
@@ -11,6 +26,7 @@ const SEASON_IDS: WearBucket["id"][] = ["winter", "spring", "summer", "fall"];
 const TIME_IDS: WearBucket["id"][] = ["day", "night"];
 
 interface UserRatingsProps {
+  fragranceId: string;
   rating: number;
   votes?: number;
   accords: string[];
@@ -19,7 +35,10 @@ interface UserRatingsProps {
   sillage?: string;
 }
 
+type LoadState = "loading" | "ready" | "unavailable" | "error";
+
 export function UserRatings({
+  fragranceId,
   rating,
   votes = 0,
   accords,
@@ -27,25 +46,226 @@ export function UserRatings({
   longevity,
   sillage,
 }: UserRatingsProps) {
-  const sentiments = deriveSentimentBuckets(rating, votes);
-  const wear = deriveWearBuckets(accords, votes, wearShares);
+  const { user, loading: authLoading } = useAuth();
+  const [state, setState] = useState<LoadState>("loading");
+  const [community, setCommunity] = useState<FragranceVoteStats | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  const loadVotes = useEffectEvent(async () => {
+    if (authLoading) return;
+    setState("loading");
+    try {
+      const params = new URLSearchParams({ fragranceId });
+      const response = await fetch(`/api/fragrance/votes?${params.toString()}`, {
+        method: "GET",
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+      if (response.status === 503) {
+        setCommunity(null);
+        setState("unavailable");
+        return;
+      }
+      if (!response.ok) {
+        setState("error");
+        return;
+      }
+      const data = (await response.json()) as { vote?: FragranceVoteStats };
+      setCommunity(data.vote ?? null);
+      setState("ready");
+    } catch {
+      setState("error");
+    }
+  });
+
+  useEffect(() => {
+    void loadVotes();
+  }, [fragranceId, user?.id, authLoading]);
+
+  async function saveVote(payload: Record<string, unknown>) {
+    if (saving || state === "unavailable") return;
+    if (!user) {
+      setMessage("Sign in to vote on ratings, occasions, longevity, and sillage.");
+      return;
+    }
+    setSaving(true);
+    setMessage(null);
+    try {
+      const response = await fetch("/api/fragrance/votes", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fragranceId, ...payload }),
+      });
+      const data = (await response.json().catch(() => ({}))) as {
+        vote?: FragranceVoteStats;
+        error?: string;
+      };
+      if (response.status === 401) {
+        setMessage("Sign in to vote on ratings, occasions, longevity, and sillage.");
+        return;
+      }
+      if (!response.ok || !data.vote) {
+        setMessage(data.error ?? "Could not save your vote.");
+        return;
+      }
+      setCommunity(data.vote);
+      setState("ready");
+      setMessage("Thanks — your vote is saved.");
+    } catch {
+      setMessage("Could not save your vote.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function voteSentiment(id: SentimentId) {
+    const current = community?.my?.sentiment;
+    void saveVote({ sentiment: current === id ? null : id });
+  }
+
+  function toggleOccasion(id: OccasionId) {
+    const current = new Set(community?.my?.occasions ?? []);
+    if (current.has(id)) current.delete(id);
+    else current.add(id);
+    void saveVote({
+      occasions: ["winter", "spring", "summer", "fall", "day", "night"].filter(
+        (item) => current.has(item as OccasionId),
+      ),
+    });
+  }
+
+  function voteLongevity(level: number) {
+    const current = community?.my?.longevityLevel;
+    void saveVote({ longevityLevel: current === level ? null : level });
+  }
+
+  function voteSillage(level: number) {
+    const current = community?.my?.sillageLevel;
+    void saveVote({ sillageLevel: current === level ? null : level });
+  }
+
+  const catalogSentiments = deriveSentimentBuckets(rating, votes);
+  const catalogWear = deriveWearBuckets(accords, votes, wearShares);
+  const hasStoredWear = hasWearShares(wearShares);
+
+  const useCommunitySentiment = (community?.sentimentVoteCount ?? 0) > 0;
+  const useCommunityWear = (community?.occasionVoterCount ?? 0) > 0;
+  const useCommunityScore = (community?.sentimentVoteCount ?? 0) > 0;
+  const useCommunityLongevity = (community?.longevityVoteCount ?? 0) > 0;
+  const useCommunitySillage = (community?.sillageVoteCount ?? 0) > 0;
+
+  const sentiments: SentimentBucket[] = useCommunitySentiment
+    ? (Object.keys(SENTIMENT_COLORS) as SentimentId[]).map((id) => {
+        const count = community!.sentiment[id];
+        const total = community!.sentimentVoteCount || 1;
+        return {
+          id,
+          label: id,
+          count,
+          share: count / total,
+          color: SENTIMENT_COLORS[id],
+        };
+      })
+    : catalogSentiments;
+
+  const wear: WearBucket[] = useCommunityWear
+    ? (Object.keys(OCCASION_COLORS) as OccasionId[]).map((id) => {
+        const count = community!.occasions[id];
+        const max = Math.max(
+          ...Object.values(community!.occasions),
+          1,
+        );
+        return {
+          id,
+          label: id,
+          count,
+          share: count / max,
+          color: OCCASION_COLORS[id],
+        };
+      })
+    : catalogWear;
+
   const seasons = wear.filter((bucket) => SEASON_IDS.includes(bucket.id));
   const times = wear.filter((bucket) => TIME_IDS.includes(bucket.id));
   const maxSentiment = Math.max(...sentiments.map((s) => s.share), 0.01);
-  // One shared scale across seasons + day/night (Fragrantica-style).
   const maxWear = Math.max(...wear.map((w) => w.share), 0.01);
-  const hasRating = rating > 0;
-  const hasWearData = accords.length > 0 || votes > 0 || hasWearShares(wearShares);
-  const hasStoredWear = hasWearShares(wearShares);
-  const longevityLevel = longevity ? scoreLongevity(longevity) : null;
-  const sillageLevel = sillage ? scoreSillage(sillage) : null;
-  const ratingPercent = Math.min(100, Math.max(0, (rating / 5) * 100));
+
+  const displayRating = useCommunityScore
+    ? (community!.communityScore ?? 0)
+    : rating;
+  const displayVotes = useCommunityScore
+    ? community!.sentimentVoteCount
+    : votes;
+  const hasRating = displayRating > 0 || useCommunitySentiment;
+  const hasWearData =
+    useCommunityWear ||
+    accords.length > 0 ||
+    votes > 0 ||
+    hasWearShares(wearShares);
+
+  const catalogLongevity = longevity ? scoreLongevity(longevity) : null;
+  const catalogSillage = sillage ? scoreSillage(sillage) : null;
+
+  const longevityLevel = useCommunityLongevity
+    ? Math.round(community!.longevityAvg ?? 0)
+    : (catalogLongevity?.level ?? null);
+  const sillageLevel = useCommunitySillage
+    ? Math.round(community!.sillageAvg ?? 0)
+    : (catalogSillage?.level ?? null);
+
+  const longevityMeta =
+    longevityLevel != null
+      ? longevityOption(longevityLevel) ?? {
+          level: longevityLevel,
+          label: longevity ?? "Longevity",
+          hint: catalogLongevity?.hint ?? "",
+        }
+      : null;
+  const sillageMeta =
+    sillageLevel != null
+      ? sillageOption(sillageLevel) ?? {
+          level: sillageLevel,
+          label: sillage ?? "Sillage",
+          hint: catalogSillage?.hint ?? "",
+        }
+      : null;
+
+  const ratingPercent = Math.min(100, Math.max(0, (displayRating / 5) * 100));
+  const votingAvailable = state !== "unavailable" && !authLoading;
+  const canAttemptVote = votingAvailable && !saving;
+  const mySentiment = community?.my?.sentiment ?? null;
+  const myOccasions = new Set(community?.my?.occasions ?? []);
+  const myLongevity = community?.my?.longevityLevel ?? null;
+  const mySillage = community?.my?.sillageLevel ?? null;
+
+  const sourceNote = (() => {
+    if (state === "unavailable") {
+      return "Community voting needs Supabase to be configured.";
+    }
+    if (useCommunitySentiment || useCommunityWear) {
+      return "Bars reflect signed-in community votes. Catalog estimates are used until the first votes arrive.";
+    }
+    return hasStoredWear
+      ? "Sentiment bars are estimated from rating and votes; wear bars use catalog occasion rankings when available. Sign in to cast the first community votes."
+      : "Sentiment and wear bars are estimated from catalog rating, votes, and accords. Sign in to cast the first community votes.";
+  })();
 
   return (
     <section aria-label="User ratings" className="space-y-4">
       <h2 className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-muted">
         User ratings
       </h2>
+
+      {!user && !authLoading ? (
+        <p className="text-center text-sm text-muted">
+          <Link href="/login" className="font-semibold text-accent hover:underline">
+            Sign in
+          </Link>{" "}
+          to vote on rating, when to wear, longevity, and sillage.
+        </p>
+      ) : null}
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="rounded-2xl border border-border bg-card p-5">
@@ -55,8 +275,12 @@ export function UserRatings({
               Rating
             </h3>
           </header>
-          {hasRating ? (
-            <div className="grid grid-cols-5 gap-2 sm:gap-3">
+          {hasRating || votingAvailable ? (
+            <div
+              className="grid grid-cols-5 gap-2 sm:gap-3"
+              role="radiogroup"
+              aria-label="Your rating"
+            >
               {sentiments.map((bucket) => (
                 <MetricColumn
                   key={bucket.id}
@@ -65,12 +289,19 @@ export function UserRatings({
                   color={bucket.color}
                   fillRatio={bucket.share / maxSentiment}
                   icon={<SentimentEmoji id={bucket.id} />}
+                  selected={mySentiment === bucket.id}
+                  disabled={!canAttemptVote}
+                  onClick={() => voteSentiment(bucket.id)}
+                  voteHint="Select one rating"
                 />
               ))}
             </div>
           ) : (
             <p className="text-sm text-muted">No rating data available.</p>
           )}
+          <p className="mt-3 text-center text-[11px] text-muted">
+            Select one. Your pick updates the community score.
+          </p>
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-5">
@@ -80,20 +311,37 @@ export function UserRatings({
               When to wear
             </h3>
           </header>
-          {hasWearData ? (
+          {hasWearData || votingAvailable ? (
             <div className="space-y-5">
-              <WearRow title="Seasons" buckets={seasons} maxShare={maxWear} />
-              <WearRow title="Day / night" buckets={times} maxShare={maxWear} />
+              <WearRow
+                title="Seasons"
+                buckets={seasons}
+                maxShare={maxWear}
+                selected={myOccasions}
+                disabled={!canAttemptVote}
+                onToggle={toggleOccasion}
+              />
+              <WearRow
+                title="Day / night"
+                buckets={times}
+                maxShare={maxWear}
+                selected={myOccasions}
+                disabled={!canAttemptVote}
+                onToggle={toggleOccasion}
+              />
             </div>
           ) : (
             <p className="text-sm text-muted">No occasion data available.</p>
           )}
+          <p className="mt-3 text-center text-[11px] text-muted">
+            Select as many as you like.
+          </p>
         </div>
       </div>
 
-      {hasRating || longevity || sillage ? (
+      {hasRating || longevity || sillage || votingAvailable ? (
         <div className="overflow-hidden rounded-2xl border border-border bg-card">
-          {hasRating ? (
+          {hasRating || useCommunityScore || votingAvailable ? (
             <div className="relative border-b border-border px-5 py-6 sm:px-7">
               <div
                 className="pointer-events-none absolute inset-0 opacity-[0.55]"
@@ -110,21 +358,26 @@ export function UserRatings({
                   </p>
                   <div className="flex items-end gap-2">
                     <span className="text-5xl font-semibold tabular-nums leading-none tracking-tight text-teal-700 dark:text-teal-400">
-                      {rating.toFixed(2)}
+                      {displayRating > 0 ? displayRating.toFixed(2) : "—"}
                     </span>
                     <span className="mb-1 text-sm text-muted">/ 5</span>
                   </div>
-                  <StarRow rating={rating} />
-                  {votes > 0 ? (
+                  <StarRow rating={displayRating} />
+                  {displayVotes > 0 ? (
                     <p className="text-sm text-muted">
                       Based on{" "}
                       <span className="font-semibold tabular-nums text-foreground">
-                        {new Intl.NumberFormat("en").format(votes)}
+                        {new Intl.NumberFormat("en").format(displayVotes)}
                       </span>{" "}
                       votes
+                      {useCommunityScore ? " from this community" : ""}
                     </p>
                   ) : (
-                    <p className="text-sm text-muted">Vote count unavailable</p>
+                    <p className="text-sm text-muted">
+                      {votingAvailable
+                        ? "Be the first to rate this fragrance."
+                        : "Vote count unavailable"}
+                    </p>
                   )}
                 </div>
 
@@ -142,42 +395,61 @@ export function UserRatings({
                     />
                   </div>
                   <p className="text-xs leading-relaxed text-muted opacity-90">
-                    {hasStoredWear
-                      ? "Sentiment bars are estimated from rating and votes; wear bars use catalog occasion rankings when available."
-                      : "Sentiment and wear bars are estimated from catalog rating, votes, and accords."}
+                    {sourceNote}
                   </p>
                 </div>
               </div>
             </div>
           ) : null}
 
-          {longevity || sillage ? (
+          {longevityMeta || sillageMeta || votingAvailable ? (
             <div className="grid gap-4 p-5 sm:grid-cols-2 sm:gap-5 sm:p-6">
-              {longevity && longevityLevel ? (
-                <PerformanceMeter
-                  title="Longevity"
-                  value={longevity}
-                  level={longevityLevel.level}
-                  max={5}
-                  hint={longevityLevel.hint}
-                  accent="#2dd4bf"
-                  icon={<HourglassIcon className="h-4 w-4" />}
-                />
-              ) : null}
-              {sillage && sillageLevel ? (
-                <PerformanceMeter
-                  title="Sillage"
-                  value={sillage}
-                  level={sillageLevel.level}
-                  max={5}
-                  hint={sillageLevel.hint}
-                  accent="#fbbf24"
-                  icon={<WaveIcon className="h-4 w-4" />}
-                />
-              ) : null}
+              <PerformanceMeter
+                title="Longevity"
+                value={longevityMeta?.label ?? "Not rated yet"}
+                level={longevityMeta?.level ?? 0}
+                max={5}
+                hint={
+                  longevityMeta?.hint ??
+                  "Tap a segment to vote how long it lasts."
+                }
+                accent="#2dd4bf"
+                icon={<HourglassIcon className="h-4 w-4" />}
+                options={LONGEVITY_OPTIONS}
+                myLevel={myLongevity}
+                disabled={!canAttemptVote}
+                onVote={voteLongevity}
+              />
+              <PerformanceMeter
+                title="Sillage"
+                value={sillageMeta?.label ?? "Not rated yet"}
+                level={sillageMeta?.level ?? 0}
+                max={5}
+                hint={
+                  sillageMeta?.hint ??
+                  "Tap a segment to vote how far the scent projects."
+                }
+                accent="#fbbf24"
+                icon={<WaveIcon className="h-4 w-4" />}
+                options={SILLAGE_OPTIONS}
+                myLevel={mySillage}
+                disabled={!canAttemptVote}
+                onVote={voteSillage}
+              />
             </div>
           ) : null}
         </div>
+      ) : null}
+
+      {message ? (
+        <p className="text-center text-xs text-muted" role="status">
+          {message}{" "}
+          {!user ? (
+            <Link href="/login" className="font-semibold text-accent hover:underline">
+              Sign in
+            </Link>
+          ) : null}
+        </p>
       ) : null}
     </section>
   );
@@ -187,10 +459,16 @@ function WearRow({
   title,
   buckets,
   maxShare,
+  selected,
+  disabled,
+  onToggle,
 }: {
   title: string;
   buckets: WearBucket[];
   maxShare: number;
+  selected: Set<OccasionId>;
+  disabled: boolean;
+  onToggle: (id: OccasionId) => void;
 }) {
   return (
     <div>
@@ -203,6 +481,8 @@ function WearRow({
             ? "mx-auto grid max-w-[11rem] grid-cols-2 gap-3"
             : "grid grid-cols-4 gap-2 sm:gap-3"
         }
+        role="group"
+        aria-label={title}
       >
         {buckets.map((bucket) => (
           <MetricColumn
@@ -212,6 +492,11 @@ function WearRow({
             color={bucket.color}
             fillRatio={bucket.share / maxShare}
             icon={<WearIcon id={bucket.id} color={bucket.color} />}
+            selected={selected.has(bucket.id)}
+            disabled={disabled}
+            onClick={() => onToggle(bucket.id)}
+            voteHint="Toggle occasion"
+            multi
           />
         ))}
       </div>
@@ -254,6 +539,10 @@ function PerformanceMeter({
   hint,
   accent,
   icon,
+  options,
+  myLevel,
+  disabled,
+  onVote,
 }: {
   title: string;
   value: string;
@@ -262,6 +551,10 @@ function PerformanceMeter({
   hint: string;
   accent: string;
   icon: ReactNode;
+  options: readonly { level: number; label: string; hint: string }[];
+  myLevel: number | null;
+  disabled: boolean;
+  onVote: (level: number) => void;
 }) {
   return (
     <dl className="rounded-xl border border-border/80 bg-background/40 px-4 py-4">
@@ -282,16 +575,26 @@ function PerformanceMeter({
             backgroundColor: `${accent}22`,
           }}
         >
-          {level}/{max}
+          {level > 0 ? `${level}/${max}` : `—/${max}`}
         </span>
       </div>
-      <div className="mt-4 flex gap-1.5" aria-hidden>
+      <div className="mt-4 flex gap-1.5" role="radiogroup" aria-label={`Your ${title.toLowerCase()} vote`}>
         {Array.from({ length: max }, (_, index) => {
+          const voteLevel = index + 1;
           const active = index < level;
+          const isMine = myLevel === voteLevel;
+          const option = options.find((item) => item.level === voteLevel);
           return (
-            <span
-              key={index}
-              className="h-2 flex-1 rounded-full"
+            <button
+              key={voteLevel}
+              type="button"
+              disabled={disabled}
+              aria-checked={isMine}
+              role="radio"
+              aria-label={option ? `${option.label} (${voteLevel} of ${max})` : `${voteLevel} of ${max}`}
+              title={option?.label}
+              onClick={() => onVote(voteLevel)}
+              className="h-2.5 flex-1 rounded-full transition-[box-shadow,opacity] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed"
               style={{
                 backgroundColor: active
                   ? accent
@@ -299,12 +602,16 @@ function PerformanceMeter({
                 opacity: active
                   ? 0.35 + ((index + 1) / max) * 0.65
                   : 0.55,
+                boxShadow: isMine ? `0 0 0 2px ${accent}` : undefined,
               }}
             />
           );
         })}
       </div>
-      <p className="mt-3 text-xs text-muted">{hint}</p>
+      <p className="mt-3 text-xs text-muted">
+        {hint}
+        {myLevel ? ` Your vote: ${myLevel}/5.` : ""}
+      </p>
     </dl>
   );
 }
@@ -355,15 +662,25 @@ function MetricColumn({
   color,
   fillRatio,
   icon,
+  selected = false,
+  disabled = true,
+  onClick,
+  voteHint,
+  multi = false,
 }: {
   label: string;
   count: number;
   color: string;
   fillRatio: number;
   icon: ReactNode;
+  selected?: boolean;
+  disabled?: boolean;
+  onClick?: () => void;
+  voteHint?: string;
+  multi?: boolean;
 }) {
-  return (
-    <div className="flex min-w-0 flex-col items-center gap-1.5">
+  const content = (
+    <>
       <div className="flex h-6 items-center justify-center">{icon}</div>
       <span className="text-[11px] lowercase text-muted">{label}</span>
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-border/70">
@@ -375,13 +692,35 @@ function MetricColumn({
           }}
         />
       </div>
-      <span
-        className="text-xs font-semibold tabular-nums"
-        style={{ color }}
-      >
+      <span className="text-xs font-semibold tabular-nums" style={{ color }}>
         {formatCount(count)}
       </span>
-    </div>
+    </>
+  );
+
+  if (!onClick) {
+    return (
+      <div className="flex min-w-0 flex-col items-center gap-1.5">{content}</div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      aria-label={`${label}${voteHint ? ` — ${voteHint}` : ""}`}
+      title={voteHint}
+      onClick={onClick}
+      className={`flex min-w-0 flex-col items-center gap-1.5 rounded-xl px-1 py-1.5 transition-[background-color,box-shadow,transform] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed ${
+        selected
+          ? "bg-background shadow-[inset_0_0_0_1.5px_var(--accent)]"
+          : "hover:bg-background/60"
+      }`}
+      aria-checked={selected}
+      role={multi ? "checkbox" : "radio"}
+    >
+      {content}
+    </button>
   );
 }
 

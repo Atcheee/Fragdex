@@ -20,6 +20,14 @@ import {
   importPOST as accountImportPost,
   syncPOST as accountSyncPost,
 } from "@/lib/api-handlers/account";
+import {
+  GET as cloneVotesGet,
+  POST as cloneVotesPost,
+} from "@/lib/api-handlers/clone-votes";
+import {
+  GET as fragranceVotesGet,
+  POST as fragranceVotesPost,
+} from "@/lib/api-handlers/fragrance-votes";
 
 /**
  * Single catch-all for most API routes so Hobby deployments stay under the
@@ -39,6 +47,8 @@ const GET_HANDLERS: Record<string, Handler> = {
   "auth/callback": authCallbackGet,
   "account/data": accountDataGet,
   "account/export": accountExportGet,
+  "clone/votes": (request) => cloneVotesGet(request),
+  "fragrance/votes": (request) => fragranceVotesGet(request),
 };
 
 const POST_HANDLERS: Record<string, Handler> = {
@@ -49,6 +59,8 @@ const POST_HANDLERS: Record<string, Handler> = {
   "swap-note": (request) => swapNotePost(request),
   "account/import": accountImportPost,
   "account/sync": accountSyncPost,
+  "clone/votes": (request) => cloneVotesPost(request),
+  "fragrance/votes": (request) => fragranceVotesPost(request),
 };
 
 const DELETE_HANDLERS: Record<string, Handler> = {

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import { FragranceBottleImage } from "@/components/FragranceBottleImage";
 import {
@@ -21,7 +21,7 @@ import {
 import { accordColor, accordSoftBackground } from "@/lib/visuals/accord-colors";
 
 export const metadata: Metadata = {
-  title: "Compare fragrances — This or That",
+  title: "Compare fragrances — Scent Games",
   description:
     "Compare any two fragrances side by side: notes, accords, ratings, popularity, wear occasions, and similarity.",
   alternates: { canonical: "/compare" },

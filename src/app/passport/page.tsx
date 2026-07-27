@@ -1,11 +1,11 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { Suspense } from "react";
 import { TastePassportDashboard } from "@/components/TastePassportDashboard";
 import { getPoolCandidates } from "@/lib/catalog";
 import { fragranceToTasteFragrance } from "@/lib/taste-passport";
 
 export const metadata: Metadata = {
-  title: "Taste Passport — This or That",
+  title: "Taste Passport — Scent Games",
   description:
     "Your living fragrance taste profile, shaped by every game and choice.",
   alternates: { canonical: "/passport" },

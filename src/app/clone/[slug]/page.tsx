@@ -1,10 +1,14 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   ArrowSquareOut,
   ArrowsLeftRight,
 } from "@phosphor-icons/react/dist/ssr";
+import {
+  CloneAccuracyVote,
+  CloneCommunityFact,
+} from "@/components/CloneAccuracyVote";
 import { FragranceBottleImage } from "@/components/FragranceBottleImage";
 import {
   getFragranceBySlug,
@@ -45,7 +49,7 @@ export async function generateMetadata({
   } is listed as an affordable alternative to ${original}. Compare similarity, price, and savings estimates.`;
 
   return {
-    title: `${profile.name} fragrance clone — This or That`,
+    title: `${profile.name} fragrance clone — Scent Games`,
     description,
     alternates: { canonical: `/clone/${profile.slug}` },
     openGraph: {
@@ -168,26 +172,22 @@ export default async function ClonePage({ params }: ClonePageProps) {
         <div className="border-t border-border p-5 sm:p-6">
           <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Fact
-              label="Similarity"
+              label="Source similarity"
               value={
                 featuredRelationship.similarityPercent !== undefined
                   ? `${featuredRelationship.similarityPercent}%`
                   : "Not rated"
               }
+              hint="Clone databases"
+            />
+            <CloneCommunityFact
+              relationshipId={featuredRelationship.id}
             />
             <Fact
               label="Clone price"
               value={
                 featuredRelationship.clonePrice !== undefined
                   ? formatClonePrice(featuredRelationship.clonePrice)
-                  : "Not listed"
-              }
-            />
-            <Fact
-              label="Featured original"
-              value={
-                featuredRelationship.originalPrice !== undefined
-                  ? formatClonePrice(featuredRelationship.originalPrice)
                   : "Not listed"
               }
             />
@@ -202,10 +202,13 @@ export default async function ClonePage({ params }: ClonePageProps) {
           </dl>
           {profile.relationships.length > 1 ? (
             <p className="mt-3 text-xs text-muted">
-              Best similarity match shown. This clone has{" "}
+              Best source-similarity match shown. This clone has{" "}
               {profile.relationships.length} listed original comparisons.
             </p>
           ) : null}
+          <CloneAccuracyVote
+            relationshipId={featuredRelationship.id}
+          />
         </div>
       </section>
 
@@ -222,7 +225,8 @@ export default async function ClonePage({ params }: ClonePageProps) {
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
             Source lists can connect one clone with more than one original.
-            Each comparison below shows its own similarity and savings estimate.
+            Each comparison below shows its own source similarity, community
+            accuracy votes, and savings estimate.
           </p>
         </div>
         <div className="grid gap-4 lg:grid-cols-2">
@@ -245,10 +249,12 @@ export default async function ClonePage({ params }: ClonePageProps) {
       <section className="rounded-2xl border border-border bg-card p-6 sm:p-8">
         <h2 className="text-xl font-semibold">About these estimates</h2>
         <p className="mt-3 max-w-3xl leading-7 text-muted">
-          Similarity and review text come from the listed clone sources. Prices
-          are snapshots and can change by retailer, region, bottle size, and
-          availability. A clone relationship describes scent inspiration, not
-          product identity or brand affiliation.
+          Source similarity and review text come from the listed clone
+          databases. Community accuracy is the average of votes from signed-in
+          visitors on this site. Prices are snapshots and can change
+          by retailer, region, bottle size, and availability. A clone
+          relationship describes scent inspiration, not product identity or
+          brand affiliation.
         </p>
         <div className="mt-5 flex flex-wrap gap-3 text-sm font-semibold">
           {cloneDataSources.map((source) => (
@@ -389,21 +395,15 @@ function OriginalCard({
 
           <dl className="mt-5 grid grid-cols-2 gap-3">
             <Fact
-              label="Similarity"
+              label="Source similarity"
               value={
                 relationship.similarityPercent !== undefined
                   ? `${relationship.similarityPercent}%`
                   : "Not rated"
               }
+              hint="Clone databases"
             />
-            <Fact
-              label="Savings"
-              value={
-                relationship.savingsPercent !== undefined
-                  ? `${relationship.savingsPercent}% less`
-                  : "Not listed"
-              }
-            />
+            <CloneCommunityFact relationshipId={relationship.id} />
             <Fact
               label="Clone price"
               value={
@@ -420,7 +420,19 @@ function OriginalCard({
                   : "Not listed"
               }
             />
+            <Fact
+              label="Savings"
+              value={
+                relationship.savingsPercent !== undefined
+                  ? `${relationship.savingsPercent}% less`
+                  : "Not listed"
+              }
+            />
           </dl>
+
+          {position > 1 ? (
+            <CloneAccuracyVote relationshipId={relationship.id} />
+          ) : null}
 
           {relationship.review ? (
             <div className="mt-5 rounded-xl bg-background p-4">
@@ -460,13 +472,24 @@ function OriginalCard({
   );
 }
 
-function Fact({ label, value }: { label: string; value: string }) {
+function Fact({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+}) {
   return (
     <div className="rounded-xl border border-border bg-background p-3">
       <dt className="text-[0.65rem] uppercase tracking-wide text-muted">
         {label}
       </dt>
       <dd className="mt-1 text-sm font-semibold tabular-nums">{value}</dd>
+      {hint ? (
+        <p className="mt-1 text-[0.65rem] text-muted">{hint}</p>
+      ) : null}
     </div>
   );
 }

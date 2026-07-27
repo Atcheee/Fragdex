@@ -1,4 +1,4 @@
-import assert from "node:assert/strict";
+﻿import assert from "node:assert/strict";
 import test from "node:test";
 import {
   normalizeEmail,
@@ -18,7 +18,7 @@ test("rejects invalid reset email addresses", () => {
 
 test("builds the recovery callback on the request origin", () => {
   assert.equal(
-    passwordResetRedirectUrl("https://fragrance-games.vercel.app/api/auth/reset-password"),
-    "https://fragrance-games.vercel.app/api/auth/callback?next=%2Freset-password",
+    passwordResetRedirectUrl("https://scent-games.vercel.app/api/auth/reset-password"),
+    "https://scent-games.vercel.app/api/auth/callback?next=%2Freset-password",
   );
 });

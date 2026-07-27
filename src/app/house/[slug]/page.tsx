@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AccordBars } from "@/components/AccordBars";
@@ -32,7 +32,7 @@ export async function generateMetadata({
   const description = `Explore ${house.fragranceCount} fragrances by ${house.name}. Search and filter the collection by name, year, notes, accords, rating, and popularity.`;
 
   return {
-    title: `${house.name} fragrances — This or That`,
+    title: `${house.name} fragrances — Scent Games`,
     description,
     alternates: { canonical: `/house/${house.slug}` },
     openGraph: {

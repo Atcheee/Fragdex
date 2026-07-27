@@ -79,6 +79,15 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      {
+        source: "/clone/emir-cedrat-essence",
+        destination: "/clone/paris-corner-emir-cedrat-essence",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

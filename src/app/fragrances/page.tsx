@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import { MagnifyingGlass } from "@phosphor-icons/react/dist/ssr";
 import { FragranceBottleIcon } from "@/components/FragranceBottleIcon";
@@ -20,7 +20,7 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 export async function generateMetadata(): Promise<Metadata> {
   const browseMeta = await getBrowseFragranceMeta();
   return {
-    title: "Browse fragrances — This or That",
+    title: "Browse fragrances — Scent Games",
     description: `Browse ${browseMeta.fragranceCount.toLocaleString("en-US")} fragrances by house, accord, release year, rating, and popularity.`,
     alternates: { canonical: "/fragrances" },
   };

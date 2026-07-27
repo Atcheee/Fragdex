@@ -2,31 +2,16 @@ import "server-only";
 
 import cloneData from "@/data/clones.json";
 import { searchKey } from "@/lib/catalog-schema";
+import {
+  type CloneProfile,
+  type CloneRelationship,
+} from "@/lib/clone-types";
 
-export interface CloneRelationship {
-  id: string;
-  cloneSlug: string;
-  cloneName: string;
-  cloneHouse?: string;
-  cloneCatalogSlug?: string;
-  originalName: string;
-  originalCatalogSlug?: string;
-  clonePrice?: number;
-  originalPrice?: number;
-  savingsPercent?: number;
-  similarityPercent?: number;
-  review?: string;
-  dealUrl?: string;
-  sourceUrls: string[];
-}
-
-export interface CloneProfile {
-  slug: string;
-  name: string;
-  house?: string;
-  catalogSlug?: string;
-  relationships: CloneRelationship[];
-}
+export type {
+  CloneProfile,
+  CloneRelationship,
+} from "@/lib/clone-types";
+export { formatClonePrice } from "@/lib/clone-types";
 
 export type CloneSort = "similarity" | "savings" | "price" | "name";
 
@@ -34,6 +19,9 @@ const relationships = cloneData.relationships as CloneRelationship[];
 const profiles = buildProfiles(relationships);
 const profileBySlug = new Map(
   profiles.map((profile) => [profile.slug, profile]),
+);
+const relationshipById = new Map(
+  relationships.map((relationship) => [relationship.id, relationship]),
 );
 
 function buildProfiles(entries: CloneRelationship[]): CloneProfile[] {
@@ -76,6 +64,16 @@ export function getCloneProfileBySlug(
 
 export function getCloneSlugs(): string[] {
   return profiles.map((profile) => profile.slug);
+}
+
+export function getCloneRelationshipById(
+  id: string,
+): CloneRelationship | undefined {
+  return relationshipById.get(id);
+}
+
+export function hasCloneRelationshipId(id: string): boolean {
+  return relationshipById.has(id);
 }
 
 export function getCloneAlternativesForOriginal(
@@ -168,14 +166,6 @@ export function lowestClonePrice(profile: CloneProfile): number {
       .map((relationship) => relationship.clonePrice)
       .filter((price): price is number => price !== undefined && price > 0),
   );
-}
-
-export function formatClonePrice(value: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: value % 1 === 0 ? 0 : 2,
-  }).format(value);
 }
 
 export const cloneDataGeneratedAt = cloneData.generatedAt;

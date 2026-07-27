@@ -8,9 +8,9 @@ import { AccountSyncProvider } from "@/components/auth/AccountSyncProvider";
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ??
-  "https://fragrance-games.vercel.app";
+  "https://scent-games.vercel.app";
 
-const title = "This or That — Fragrance Games";
+const title = "Scent Games";
 const description =
   "Test your fragrance knowledge: ratings, prices, notes, accords, houses and more.";
 
@@ -18,10 +18,11 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title,
   description,
-  applicationName: "This or That",
+  applicationName: "Scent Games",
   keywords: [
     "fragrance",
     "perfume",
+    "scent games",
     "this or that",
     "scent quiz",
     "perfume game",
@@ -31,9 +32,9 @@ export const metadata: Metadata = {
     "find your fragrance",
     "perfume recommendation",
   ],
-  authors: [{ name: "This or That" }],
-  creator: "This or That",
-  publisher: "This or That",
+  authors: [{ name: "Scent Games" }],
+  creator: "Scent Games",
+  publisher: "Scent Games",
   robots: {
     index: true,
     follow: true,
@@ -52,7 +53,7 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: "/",
-    siteName: "This or That",
+    siteName: "Scent Games",
     title,
     description,
   },

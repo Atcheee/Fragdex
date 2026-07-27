@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import { MagnifyingGlass } from "@phosphor-icons/react/dist/ssr";
 import { CloneCard } from "@/components/CloneCard";
@@ -10,7 +10,7 @@ import {
 import { getFragrancesBySlugs } from "@/lib/catalog";
 
 export const metadata: Metadata = {
-  title: "Fragrance clones and affordable alternatives — This or That",
+  title: "Fragrance clones and affordable alternatives — Scent Games",
   description:
     "Browse fragrance clones, similarity estimates, listed prices, savings, and their designer or niche originals.",
   alternates: { canonical: "/clones" },
@@ -145,24 +145,28 @@ export default async function ClonesPage({
 
         {visibleProfiles.length > 0 ? (
           <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {visibleProfiles.map((profile) => (
-              <CloneCard
-                key={profile.slug}
-                profile={profile}
-                cloneFragrance={
-                  profile.catalogSlug
-                    ? catalogBySlug.get(profile.catalogSlug)
-                    : undefined
-                }
-                originalFragrance={
-                  profile.relationships[0]?.originalCatalogSlug
-                    ? catalogBySlug.get(
-                        profile.relationships[0].originalCatalogSlug,
-                      )
-                    : undefined
-                }
-              />
-            ))}
+            {visibleProfiles.map((profile) => {
+              const originalFragrances = Object.fromEntries(
+                profile.relationships.flatMap((relationship) => {
+                  const slug = relationship.originalCatalogSlug;
+                  if (!slug) return [];
+                  const fragrance = catalogBySlug.get(slug);
+                  return fragrance ? [[slug, fragrance] as const] : [];
+                }),
+              );
+              return (
+                <CloneCard
+                  key={profile.slug}
+                  profile={profile}
+                  cloneFragrance={
+                    profile.catalogSlug
+                      ? catalogBySlug.get(profile.catalogSlug)
+                      : undefined
+                  }
+                  originalFragrances={originalFragrances}
+                />
+              );
+            })}
           </div>
         ) : (
           <div className="mt-5 rounded-2xl border border-dashed border-border px-6 py-14 text-center">

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-26T18:13:47.826Z",
+  "generatedAt": "2026-07-27T19:07:34.527Z",
   "sources": [
     {
       "name": "Clone Spreadsheet",
@@ -11,22 +11,6 @@
     }
   ],
   "relationships": [
-    {
-      "id": "emir-cedrat-essence--mancera-cedrat-boise-de3ac95",
-      "cloneSlug": "emir-cedrat-essence",
-      "cloneName": "Cedrat Essence",
-      "cloneHouse": "Emir",
-      "originalName": "Mancera Cedrat Boise",
-      "originalCatalogSlug": "mancera-cedrat-boise",
-      "clonePrice": 24.99,
-      "originalPrice": 73.5,
-      "savingsPercent": 66,
-      "similarityPercent": 99,
-      "dealUrl": "https://www.dpbolvw.net/click-101567079-14472060?url=https%3A%2F%2Fwww.jomashop.com%2Fparis-corner-unisex-emir-cedrat-essense-edp-spray-2-5-oz-fragrances-6294790437519.html&cjsku=Z-TP5FH",
-      "sourceUrls": [
-        "https://clonespreadsheet.com/"
-      ]
-    },
     {
       "id": "armaf-club-de-nuit-precieux-1--creed-absolu-aventus-ba19711",
       "cloneSlug": "armaf-club-de-nuit-precieux-1",
@@ -44,6 +28,23 @@
       "sourceUrls": [
         "https://clonespreadsheet.com/",
         "https://docs.google.com/spreadsheets/d/1oAOJKQwvbx9jnzgr3xUn8XaKDq0RhUdWmXvdv4qd_kI/edit?gid=0"
+      ]
+    },
+    {
+      "id": "paris-corner-emir-cedrat-essence--mancera-cedrat-boise-de3ac95",
+      "cloneSlug": "paris-corner-emir-cedrat-essence",
+      "cloneName": "Emir Cedrat Essence",
+      "cloneHouse": "Paris Corner",
+      "cloneCatalogSlug": "paris-corner-cedrat-essence-emir",
+      "originalName": "Mancera Cedrat Boise",
+      "originalCatalogSlug": "mancera-cedrat-boise",
+      "clonePrice": 24.99,
+      "originalPrice": 73.5,
+      "savingsPercent": 66,
+      "similarityPercent": 99,
+      "dealUrl": "https://www.dpbolvw.net/click-101567079-14472060?url=https%3A%2F%2Fwww.jomashop.com%2Fparis-corner-unisex-emir-cedrat-essense-edp-spray-2-5-oz-fragrances-6294790437519.html&cjsku=Z-TP5FH",
+      "sourceUrls": [
+        "https://clonespreadsheet.com/"
       ]
     },
     {
@@ -503,12 +504,13 @@
       ]
     },
     {
-      "id": "lattafa-najdia-intense--jpg-paradise-garden-98c8a7b",
+      "id": "lattafa-najdia-intense--jean-paul-gaultier-le-beau-paradise-garden-98c8a7b",
       "cloneSlug": "lattafa-najdia-intense",
       "cloneName": "Najdia Intense",
       "cloneHouse": "Lattafa",
       "cloneCatalogSlug": "lattafa-perfumes-najdia-intense",
       "originalName": "JPG Paradise Garden",
+      "originalCatalogSlug": "jean-paul-gaultier-le-beau-paradise-garden",
       "clonePrice": 21.99,
       "originalPrice": 102.29,
       "savingsPercent": 79,
@@ -631,6 +633,7 @@
       "cloneSlug": "maison-alhambra-victorioso-nero",
       "cloneName": "Victorioso Nero",
       "cloneHouse": "Maison Alhambra",
+      "cloneCatalogSlug": "maison-alhambra-victorioso",
       "originalName": "Invictus Victory",
       "originalCatalogSlug": "paco-rabanne-invictus-victory",
       "clonePrice": 19.99,
@@ -1302,6 +1305,7 @@
       "cloneSlug": "lattafa-eternal-oud",
       "cloneName": "Eternal Oud",
       "cloneHouse": "Lattafa",
+      "cloneCatalogSlug": "lattafa-perfumes-eternal-oud",
       "originalName": "MFK Grand Soir",
       "originalCatalogSlug": "maison-francis-kurkdjian-grand-soir-mfk-grand-soir",
       "clonePrice": 30.99,
@@ -1944,12 +1948,13 @@
       ]
     },
     {
-      "id": "maison-alhambra-kismet-moscow--vodka-on-rocks-by-kilian-af998a0",
+      "id": "maison-alhambra-kismet-moscow--kilian-vodka-on-the-rocks-by-af998a0",
       "cloneSlug": "maison-alhambra-kismet-moscow",
       "cloneName": "Kismet Moscow",
       "cloneHouse": "Maison Alhambra",
       "cloneCatalogSlug": "maison-alhambra-kismet-moscow",
       "originalName": "Vodka On Rocks By Kilian",
+      "originalCatalogSlug": "kilian-vodka-on-the-rocks-by",
       "clonePrice": 18.99,
       "originalPrice": 229.99,
       "savingsPercent": 92,
@@ -2022,6 +2027,7 @@
       "cloneSlug": "lattafa-pride-la-collection-d-antiquites",
       "cloneName": "Pride La Collection D'Antiquites",
       "cloneHouse": "Lattafa",
+      "cloneCatalogSlug": "lattafa-perfumes-la-collection-d-antiquites",
       "originalName": "Paco Rabanne 1 Million Elixir",
       "originalCatalogSlug": "paco-rabanne-1-million-elixir-rabanne",
       "clonePrice": 33.99,
@@ -2792,6 +2798,7 @@
       "cloneSlug": "lattafa-vintage-radio",
       "cloneName": "Vintage Radio",
       "cloneHouse": "Lattafa",
+      "cloneCatalogSlug": "lattafa-perfumes-vintage-radio",
       "originalName": "Initio Paragon",
       "originalCatalogSlug": "initio-paragon",
       "clonePrice": 26.95,
@@ -2954,13 +2961,13 @@
       ]
     },
     {
-      "id": "paris-corner-zodiac-stratos--yves-saint-laurent-y-elixir-4a4e42e",
+      "id": "paris-corner-zodiac-stratos--yves-saint-laurent-ysl-y-elixir-4a4e42e",
       "cloneSlug": "paris-corner-zodiac-stratos",
       "cloneName": "Zodiac Stratos",
       "cloneHouse": "Paris Corner",
       "cloneCatalogSlug": "paris-corner-zodiac-stratos",
       "originalName": "YSL Y Elixir",
-      "originalCatalogSlug": "yves-saint-laurent-y-elixir",
+      "originalCatalogSlug": "yves-saint-laurent-ysl-y-elixir",
       "clonePrice": 24.99,
       "originalPrice": 99.99,
       "savingsPercent": 75,
@@ -3139,6 +3146,7 @@
       "cloneSlug": "armaf-excellus",
       "cloneName": "Excellus",
       "cloneHouse": "Armaf",
+      "cloneCatalogSlug": "armaf-excellus-men",
       "originalName": "Carolina Herrera CH Men",
       "originalCatalogSlug": "carolina-herrera-ch-men",
       "clonePrice": 23.99,
@@ -3194,6 +3202,7 @@
       "cloneSlug": "reyane-tradition-insurrection-2-sport",
       "cloneName": "Insurrection 2 Sport",
       "cloneHouse": "Reyane Tradition",
+      "cloneCatalogSlug": "reyane-tradition-insurrection-ii-sport",
       "originalName": "Creed Aventus Cologne",
       "originalCatalogSlug": "creed-aventus-cologne",
       "clonePrice": 23.26,
@@ -3210,6 +3219,7 @@
       "cloneSlug": "reyane-tradition-insurrection-ii",
       "cloneName": "Insurrection II",
       "cloneHouse": "Reyane Tradition",
+      "cloneCatalogSlug": "reyane-tradition-insurrection-ii-wild",
       "originalName": "Creed Aventus Cologne",
       "originalCatalogSlug": "creed-aventus-cologne",
       "clonePrice": 24.99,
@@ -3296,12 +3306,13 @@
       ]
     },
     {
-      "id": "maison-alhambra-luxe-bold--bond-no-9-bleeker-street-62fc897",
+      "id": "maison-alhambra-luxe-bold--bond-no-9-bleecker-street-62fc897",
       "cloneSlug": "maison-alhambra-luxe-bold",
       "cloneName": "Luxe Bold",
       "cloneHouse": "Maison Alhambra",
       "cloneCatalogSlug": "maison-alhambra-luxe-bold",
       "originalName": "Bond No 9 Bleeker Street",
+      "originalCatalogSlug": "bond-no-9-bleecker-street",
       "clonePrice": 29.99,
       "originalPrice": 259.99,
       "savingsPercent": 89,
@@ -3633,12 +3644,13 @@
       ]
     },
     {
-      "id": "armaf-the-warrior--bond-no-9-i-love-new-york-204cea3",
+      "id": "armaf-the-warrior--bond-no-9-i-love-new-york-earth-day-204cea3",
       "cloneSlug": "armaf-the-warrior",
       "cloneName": "The Warrior",
       "cloneHouse": "Armaf",
       "cloneCatalogSlug": "armaf-the-warrior",
       "originalName": "Bond No 9 I Love New York",
+      "originalCatalogSlug": "bond-no-9-i-love-new-york-earth-day",
       "clonePrice": 22.99,
       "originalPrice": 259.99,
       "savingsPercent": 92,
@@ -3655,6 +3667,7 @@
       "cloneSlug": "maison-alhambra-victorioso-myth",
       "cloneName": "Victorioso Myth",
       "cloneHouse": "Maison Alhambra",
+      "cloneCatalogSlug": "maison-alhambra-victorioso",
       "originalName": "Invictus Legend",
       "originalCatalogSlug": "paco-rabanne-invictus-legend",
       "clonePrice": 19.99,
@@ -4003,11 +4016,13 @@
       ]
     },
     {
-      "id": "fragrance-world-imperium-x--roja-apex-3a0453e",
+      "id": "fragrance-world-imperium-x--roja-parfums-apex-3a0453e",
       "cloneSlug": "fragrance-world-imperium-x",
       "cloneName": "Imperium X",
       "cloneHouse": "Fragrance World",
+      "cloneCatalogSlug": "fragrance-world-imperium-x",
       "originalName": "Roja Apex",
+      "originalCatalogSlug": "roja-parfums-apex",
       "clonePrice": 22.99,
       "originalPrice": 225,
       "savingsPercent": 90,
@@ -4451,6 +4466,7 @@
       "id": "clone-royal-blanc--initio-parfums-prives-musk-therapy-dbded08",
       "cloneSlug": "clone-royal-blanc",
       "cloneName": "Royal Blanc",
+      "cloneCatalogSlug": "jequiti-royal-madeira-blanc",
       "originalName": "Initio Musk Therapy",
       "originalCatalogSlug": "initio-parfums-prives-musk-therapy",
       "clonePrice": 31.6,
@@ -4505,6 +4521,7 @@
       "cloneSlug": "zara-night-pour-homme",
       "cloneName": "Night Pour Homme",
       "cloneHouse": "Zara",
+      "cloneCatalogSlug": "zara-zara-night-pour-homme-ii",
       "originalName": "YSL L'Homme Parfum Intense",
       "originalCatalogSlug": "yves-saint-laurent-l-homme-parfum-intense",
       "clonePrice": 54.99,
@@ -4591,6 +4608,7 @@
       "cloneSlug": "fragrance-world-tempete-jacques-yves",
       "cloneName": "Tempète Jacques Yves",
       "cloneHouse": "Fragrance World",
+      "cloneCatalogSlug": "fragrance-world-jacques-yves-tempete",
       "originalName": "Louis Vuitton Orage",
       "originalCatalogSlug": "louis-vuitton-orage",
       "clonePrice": 19.99,
@@ -4723,12 +4741,13 @@
       ]
     },
     {
-      "id": "king-of-kings-royal-blue--jpg-paradise-garden-94d0aeb",
+      "id": "king-of-kings-royal-blue--jean-paul-gaultier-le-beau-paradise-garden-94d0aeb",
       "cloneSlug": "king-of-kings-royal-blue",
       "cloneName": "Royal Blue",
       "cloneHouse": "King of Kings",
       "cloneCatalogSlug": "king-of-kings-royal-blue",
       "originalName": "JPG Paradise Garden",
+      "originalCatalogSlug": "jean-paul-gaultier-le-beau-paradise-garden",
       "clonePrice": 54.51,
       "originalPrice": 102.99,
       "savingsPercent": 47,

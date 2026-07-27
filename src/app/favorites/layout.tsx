@@ -1,7 +1,7 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Favorites — This or That",
+  title: "Favorites — Scent Games",
   description:
     "Fragrances you saved for later. Hearts stay on this device until you clear them.",
   alternates: { canonical: "/favorites" },

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -9,7 +9,7 @@ import { FragranceBottleImage } from "@/components/FragranceBottleImage";
 import { getAllFragranceFamilies } from "@/lib/fragrance-families";
 
 export const metadata: Metadata = {
-  title: "Fragrance family trees — This or That",
+  title: "Fragrance family trees — Scent Games",
   description:
     "Explore curated fragrance lines chronologically and compare how notes and accords changed across flankers and concentrations.",
   alternates: { canonical: "/families" },
