@@ -1,9 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { type FormEvent, useState } from "react";
 import { clearLocalAccountData } from "@/lib/account-storage";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import {
+  DISPLAY_NAME_MAX_LENGTH,
+  getUserDisplayName,
+  normalizeDisplayName,
+} from "@/lib/user-display-name";
 import { useAccountSync } from "./AccountSyncProvider";
 import { useAuth } from "./AuthProvider";
 
@@ -12,6 +17,7 @@ export function AccountDashboard() {
   const { status, syncNow } = useAccountSync();
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState("");
+  const savedDisplayName = getUserDisplayName(user);
 
   if (loading) {
     return <p className="text-center text-muted">Loading your account…</p>;
@@ -109,7 +115,10 @@ export function AccountDashboard() {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-sm text-muted">Signed in as</p>
-            <p className="mt-1 font-semibold">{user.email ?? "Social account"}</p>
+            <p className="mt-1 font-semibold">{savedDisplayName}</p>
+            <p className="mt-1 text-sm text-muted">
+              {user.email ?? "Social account"}
+            </p>
             <p className="mt-2 text-xs text-muted">
               Connected with {providers.join(", ") || "email"} ·{" "}
               {user.email_confirmed_at ? "email verified" : "verification pending"}
@@ -117,6 +126,11 @@ export function AccountDashboard() {
           </div>
           <SyncBadge status={status} />
         </div>
+        <DisplayNameForm
+          key={`${user.id}:${savedDisplayName}`}
+          initialName={savedDisplayName}
+          onMessage={setMessage}
+        />
         <div className="mt-6 flex flex-wrap gap-3">
           <button
             type="button"
@@ -198,6 +212,85 @@ function SyncBadge({ status }: { status: string }) {
     <span className="rounded-full bg-accent-soft px-3 py-1.5 text-xs font-bold text-accent">
       {label}
     </span>
+  );
+}
+
+function DisplayNameForm({
+  initialName,
+  onMessage,
+}: {
+  initialName: string;
+  onMessage: (message: string) => void;
+}) {
+  const [displayName, setDisplayName] = useState(initialName);
+  const [saving, setSaving] = useState(false);
+  const normalized = normalizeDisplayName(displayName);
+
+  async function saveDisplayName(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!normalized) {
+      onMessage("Enter a display name.");
+      return;
+    }
+    if (normalized.length > DISPLAY_NAME_MAX_LENGTH) {
+      onMessage(
+        `Display name must be ${DISPLAY_NAME_MAX_LENGTH} characters or fewer.`,
+      );
+      return;
+    }
+
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) {
+      onMessage("Could not update your display name. Please try again.");
+      return;
+    }
+
+    setSaving(true);
+    onMessage("");
+    const { error } = await supabase.auth.updateUser({
+      data: { display_name: normalized },
+    });
+    if (error) {
+      onMessage("Could not update your display name. Please try again.");
+    } else {
+      setDisplayName(normalized);
+      onMessage("Display name updated.");
+    }
+    setSaving(false);
+  }
+
+  return (
+    <form
+      className="mt-6 border-t border-border pt-6"
+      onSubmit={(event) => void saveDisplayName(event)}
+    >
+      <label htmlFor="display-name" className="text-sm font-semibold">
+        Display name
+      </label>
+      <p id="display-name-help" className="mt-1 text-xs text-muted">
+        Shown in the account button and on your profile.
+      </p>
+      <div className="mt-3 flex max-w-lg flex-col gap-3 sm:flex-row">
+        <input
+          id="display-name"
+          name="displayName"
+          type="text"
+          autoComplete="name"
+          maxLength={DISPLAY_NAME_MAX_LENGTH}
+          value={displayName}
+          onChange={(event) => setDisplayName(event.target.value)}
+          aria-describedby="display-name-help"
+          className="min-w-0 flex-1 rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
+        />
+        <button
+          type="submit"
+          disabled={saving || !normalized || normalized === initialName}
+          className="rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50 dark:text-black"
+        >
+          {saving ? "Saving…" : "Save name"}
+        </button>
+      </div>
+    </form>
   );
 }
 

@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { ArrowsLeftRight } from "@phosphor-icons/react/dist/ssr";
+import { FragranceBottleImage } from "@/components/FragranceBottleImage";
+import type { CatalogFragrance } from "@/lib/catalog";
 import {
   bestSavings,
   bestSimilarity,
@@ -8,49 +10,100 @@ import {
   type CloneProfile,
 } from "@/lib/clone-data";
 
-export function CloneCard({ profile }: { profile: CloneProfile }) {
+export function CloneCard({
+  profile,
+  cloneFragrance,
+  originalFragrance,
+}: {
+  profile: CloneProfile;
+  cloneFragrance?: CatalogFragrance;
+  originalFragrance?: CatalogFragrance;
+}) {
   const similarity = bestSimilarity(profile);
   const savings = bestSavings(profile);
   const price = lowestClonePrice(profile);
-  const originals = profile.relationships.map(
-    (relationship) => relationship.originalName,
-  );
+  const featuredOriginal = profile.relationships[0]!;
 
   return (
     <Link
       href={`/clone/${profile.slug}`}
-      className="group flex min-w-0 flex-col rounded-2xl border border-border bg-card p-4 transition-[border-color,background-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-accent hover:bg-card-hover hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+      className="group flex min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-card transition-[border-color,background-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-accent hover:bg-card-hover hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="bottle-studio relative grid h-40 grid-cols-[1fr_2.25rem_1fr] items-end px-3 pb-3 pt-5">
+        <div className="flex h-full min-w-0 items-end justify-center">
+          <FragranceBottleImage
+            imageUrl={cloneFragrance?.imageUrl}
+            alt={`${profile.name}${profile.house ? ` by ${profile.house}` : ""} bottle`}
+            width={150}
+            height={200}
+            sizes="(max-width: 640px) 34vw, (max-width: 1280px) 13vw, 110px"
+            className="max-h-32 w-auto max-w-full object-contain transition-transform duration-200 group-hover:scale-[1.03]"
+            placeholderClassName="h-20 w-auto text-stone-400 opacity-35"
+            stage={false}
+            preferCutout
+          />
+        </div>
+        <span className="mb-10 grid size-9 place-items-center rounded-full border border-accent/25 bg-background/90 text-accent shadow-sm">
+          <ArrowsLeftRight aria-hidden size={18} />
+        </span>
+        <div className="flex h-full min-w-0 items-end justify-center">
+          <FragranceBottleImage
+            imageUrl={originalFragrance?.imageUrl}
+            alt={`${featuredOriginal.originalName} bottle`}
+            width={150}
+            height={200}
+            sizes="(max-width: 640px) 34vw, (max-width: 1280px) 13vw, 110px"
+            className="max-h-32 w-auto max-w-full object-contain transition-transform duration-200 group-hover:scale-[1.03]"
+            placeholderClassName="h-20 w-auto text-stone-400 opacity-35"
+            stage={false}
+            preferCutout
+          />
+        </div>
+        <span className="absolute left-3 top-3 rounded-full border border-border bg-background/90 px-2 py-1 text-[0.6rem] font-semibold uppercase tracking-wide text-foreground">
+          Clone
+        </span>
+        <span className="absolute right-3 top-3 rounded-full border border-border bg-background/90 px-2 py-1 text-[0.6rem] font-semibold uppercase tracking-wide text-muted">
+          Original
+        </span>
+      </div>
+
+      <div className="flex flex-1 flex-col p-4">
         <div className="min-w-0">
           <span className="block truncate text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-accent">
             {profile.house ?? "Clone fragrance"}
           </span>
-          <h2 className="mt-1.5 line-clamp-2 font-display text-lg font-semibold leading-snug tracking-tight">
+          <h2 className="mt-1 line-clamp-2 font-display text-lg font-semibold leading-snug tracking-tight">
             {profile.name}
           </h2>
         </div>
-        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-accent-soft text-accent">
-          <ArrowsLeftRight aria-hidden size={18} />
-        </span>
+
+        <div className="mt-3 border-l-2 border-accent/60 pl-3">
+          <span className="block text-[0.62rem] font-semibold uppercase tracking-wide text-muted">
+            Inspired by
+          </span>
+          <p className="mt-0.5 line-clamp-2 text-sm font-medium leading-5">
+            {featuredOriginal.originalName}
+            {profile.relationships.length > 1 ? (
+              <span className="font-normal text-muted">
+                {" "}
+                + {profile.relationships.length - 1} more
+              </span>
+            ) : null}
+          </p>
+        </div>
+
+        <dl className="mt-auto grid grid-cols-3 gap-2 border-t border-border/70 pt-4 text-center">
+          <Metric
+            label="Similarity"
+            value={similarity >= 0 ? `${similarity}%` : "—"}
+          />
+          <Metric
+            label="Clone price"
+            value={Number.isFinite(price) ? formatClonePrice(price) : "—"}
+          />
+          <Metric label="Savings" value={savings >= 0 ? `${savings}%` : "—"} />
+        </dl>
       </div>
-
-      <p className="mt-4 line-clamp-2 text-sm leading-6 text-muted">
-        Alternative to {originals[0]}
-        {originals.length > 1 ? ` and ${originals.length - 1} more` : ""}
-      </p>
-
-      <dl className="mt-5 grid grid-cols-3 gap-2 border-t border-border/70 pt-4 text-center">
-        <Metric
-          label="Match"
-          value={similarity >= 0 ? `${similarity}%` : "—"}
-        />
-        <Metric
-          label="Price"
-          value={Number.isFinite(price) ? formatClonePrice(price) : "—"}
-        />
-        <Metric label="Less" value={savings >= 0 ? `${savings}%` : "—"} />
-      </dl>
     </Link>
   );
 }

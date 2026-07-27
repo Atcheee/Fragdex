@@ -11,6 +11,7 @@ import {
 } from "@/lib/api-handlers/swap-note";
 import { GET as trendsGet } from "@/lib/api-handlers/trends";
 import { GET as authCallbackGet } from "@/lib/api-handlers/auth-callback";
+import { POST as authResetPost } from "@/lib/api-handlers/auth-reset";
 import {
   accountDELETE as accountDelete,
   dataDELETE as accountDataDelete,
@@ -41,6 +42,7 @@ const GET_HANDLERS: Record<string, Handler> = {
 };
 
 const POST_HANDLERS: Record<string, Handler> = {
+  "auth/reset-password": authResetPost,
   "collection/analyze": (request) => collectionAnalyzePost(request),
   "game/start": (request) => gameStartPost(request),
   scentle: (request) => scentlePost(request),

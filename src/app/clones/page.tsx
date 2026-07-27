@@ -7,6 +7,7 @@ import {
   getCloneProfiles,
   type CloneSort,
 } from "@/lib/clone-data";
+import { getFragrancesBySlugs } from "@/lib/catalog";
 
 export const metadata: Metadata = {
   title: "Fragrance clones and affordable alternatives — This or That",
@@ -33,6 +34,22 @@ export default async function ClonesPage({
   const visibleProfiles = profiles.slice(
     (page - 1) * PAGE_SIZE,
     page * PAGE_SIZE,
+  );
+  const catalogSlugs = [
+    ...new Set(
+      visibleProfiles.flatMap((profile) => [
+        ...(profile.catalogSlug ? [profile.catalogSlug] : []),
+        ...profile.relationships.flatMap((relationship) =>
+          relationship.originalCatalogSlug
+            ? [relationship.originalCatalogSlug]
+            : [],
+        ),
+      ]),
+    ),
+  ];
+  const catalogFragrances = await getFragrancesBySlugs(catalogSlugs);
+  const catalogBySlug = new Map(
+    catalogFragrances.map((fragrance) => [fragrance.slug, fragrance]),
   );
   const relationshipCount = getCloneProfiles().reduce(
     (sum, profile) => sum + profile.relationships.length,
@@ -129,7 +146,22 @@ export default async function ClonesPage({
         {visibleProfiles.length > 0 ? (
           <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {visibleProfiles.map((profile) => (
-              <CloneCard key={profile.slug} profile={profile} />
+              <CloneCard
+                key={profile.slug}
+                profile={profile}
+                cloneFragrance={
+                  profile.catalogSlug
+                    ? catalogBySlug.get(profile.catalogSlug)
+                    : undefined
+                }
+                originalFragrance={
+                  profile.relationships[0]?.originalCatalogSlug
+                    ? catalogBySlug.get(
+                        profile.relationships[0].originalCatalogSlug,
+                      )
+                    : undefined
+                }
+              />
             ))}
           </div>
         ) : (

@@ -249,6 +249,17 @@ export async function getFragrancesByIds(
   );
 }
 
+export async function getFragrancesBySlugs(
+  slugs: readonly string[],
+): Promise<CatalogFragrance[]> {
+  if (slugs.length === 0) return [];
+  const placeholders = slugs.map(() => "?").join(",");
+  return selectFragrances(
+    `SELECT ${FRAGRANCE_COLUMNS} FROM fragrance f WHERE f.slug IN (${placeholders})`,
+    ...slugs,
+  );
+}
+
 /**
  * The subset of `names` that a real fragrance already uses, compared on the
  * normalized key the catalog is indexed by. Returns the names as given, so

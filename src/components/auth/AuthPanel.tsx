@@ -2,18 +2,9 @@
 
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
-import type { Provider } from "@supabase/supabase-js";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type AuthMode = "login" | "signup" | "forgot" | "reset";
-
-const SOCIAL_PROVIDERS: Array<{ id: Provider; label: string }> = [
-  { id: "google", label: "Google" },
-  { id: "github", label: "GitHub" },
-  { id: "azure", label: "Microsoft" },
-  { id: "discord", label: "Discord" },
-  { id: "facebook", label: "Facebook" },
-];
 
 export function AuthPanel({
   mode,
@@ -63,12 +54,26 @@ export function AuthPanel({
       if (authError) setError(authError.message);
       else setMessage("Check your email to verify your account, then sign in.");
     } else if (mode === "forgot") {
-      const { error: authError } = await supabase!.auth.resetPasswordForEmail(
-        email,
-        { redirectTo: callbackUrl("/reset-password") },
-      );
-      if (authError) setError(authError.message);
-      else setMessage("If an account exists, a reset link is on its way.");
+      try {
+        const response = await fetch("/api/auth/reset-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+        const result = (await response.json()) as {
+          error?: string;
+          message?: string;
+        };
+        if (!response.ok) {
+          setError(result.error ?? "Password reset is temporarily unavailable.");
+        } else {
+          setMessage(
+            result.message ?? "If an account exists, a reset link is on its way.",
+          );
+        }
+      } catch {
+        setError("Password reset is temporarily unavailable.");
+      }
     } else {
       const { error: authError } = await supabase!.auth.updateUser({ password });
       if (authError) setError(authError.message);
@@ -115,14 +120,13 @@ export function AuthPanel({
     }
   }
 
-  async function socialLogin(provider: Provider) {
-    setBusy(provider);
+  async function googleLogin() {
+    setBusy("google");
     setError("");
     const { error: authError } = await supabase!.auth.signInWithOAuth({
-      provider,
+      provider: "google",
       options: {
         redirectTo: callbackUrl("/account"),
-        ...(provider === "azure" ? { scopes: "email" } : {}),
       },
     });
     if (authError) {
@@ -216,19 +220,15 @@ export function AuthPanel({
             or continue with
             <span className="h-px flex-1 bg-border" />
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            {SOCIAL_PROVIDERS.map((provider) => (
-              <button
-                key={provider.id}
-                type="button"
-                disabled={Boolean(busy)}
-                onClick={() => socialLogin(provider.id)}
-                className="rounded-xl border border-border bg-background px-3 py-2.5 text-sm font-semibold hover:border-accent disabled:opacity-50 last:col-span-2"
-              >
-                {busy === provider.id ? "Opening…" : provider.label}
-              </button>
-            ))}
-          </div>
+          <button
+            type="button"
+            disabled={Boolean(busy)}
+            onClick={googleLogin}
+            className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-border bg-background px-3 py-2.5 text-sm font-semibold hover:border-accent disabled:opacity-50"
+          >
+            <GoogleIcon />
+            {busy === "google" ? "Opening…" : "Google"}
+          </button>
         </>
       )}
 
@@ -264,6 +264,33 @@ function AuthCard({
       </h1>
       <div className="mt-6">{children}</div>
     </section>
+  );
+}
+
+function GoogleIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="size-5 shrink-0"
+      viewBox="0 0 24 24"
+    >
+      <path
+        fill="#4285F4"
+        d="M21.6 12.23c0-.71-.06-1.4-.18-2.07H12v3.91h5.38a4.6 4.6 0 0 1-2 3.02v2.54h3.24c1.9-1.75 2.98-4.32 2.98-7.4Z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 22c2.7 0 4.98-.9 6.63-2.43l-3.24-2.54a6.02 6.02 0 0 1-8.96-3.17H3.08v2.62A10 10 0 0 0 12 22Z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M6.43 13.86a6.02 6.02 0 0 1 0-3.83V7.41H3.08a10 10 0 0 0 0 9.07l3.35-2.62Z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 6.05c1.56-.02 3.07.56 4.21 1.65l3.13-3.13A10 10 0 0 0 3.08 7.41l3.35 2.62A5.96 5.96 0 0 1 12 6.05Z"
+      />
+    </svg>
   );
 }
 

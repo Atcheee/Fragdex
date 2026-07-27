@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { getUserDisplayName } from "@/lib/user-display-name";
 import { useAuth } from "./AuthProvider";
 
 export function HeaderAccount() {
@@ -12,9 +13,9 @@ export function HeaderAccount() {
     <Link
       href="/account"
       className="flex h-9 max-w-32 items-center rounded-full border border-border bg-card px-3 text-xs font-bold hover:border-accent"
-      title={user.email}
+      title={getUserDisplayName(user)}
     >
-      <span className="truncate">{displayName(user.email)}</span>
+      <span className="truncate">{getUserDisplayName(user)}</span>
     </Link>
   ) : (
     <Link
@@ -24,8 +25,4 @@ export function HeaderAccount() {
       Log in
     </Link>
   );
-}
-
-function displayName(email?: string): string {
-  return email?.split("@")[0] || "Account";
 }
