@@ -9,6 +9,7 @@
     "push:catalog": "node --env-file=.env.local --import tsx scripts/push-catalog-to-turso.ts",
     "rebuild:search": "node --env-file=.env.local --import tsx scripts/rebuild-fragrance-search.ts",
     "upload:bottle": "node --env-file=.env.local --import tsx scripts/upload-bottle-image.ts",
+    "upload:atlas": "node --env-file=.env.local --import tsx scripts/upload-fragrance-atlas.ts",
     "predev": "node scripts/ensure-catalog-db.mjs",
     "dev": "next dev",
     "build": "next build",
