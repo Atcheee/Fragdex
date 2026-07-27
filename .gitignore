@@ -30,22 +30,23 @@
 # local temp / scratch
 /tmp/
 /qa-artifacts/
+/.lighthouse/
+/design-qa.md
+/build-output.txt
 
-# local scrape/build tooling + caches (not part of the app)
-/scripts/*
-!/scripts/scrape-scentbase.ts
-!/scripts/dataset-utils.ts
-!/scripts/cutout-worker.mjs
-!/scripts/build-catalog-db.ts
-!/scripts/ensure-catalog-db.mjs
-!/scripts/generate-fragrance-atlas.ts
-!/scripts/sync-fragrantica-cache.ts
-!/scripts/push-catalog-to-turso.ts
-!/scripts/finish-catalog-push.ts
-!/scripts/upload-bottle-image.ts
+# private catalog source + derived atlas (not published)
+/src/data/fragrances.json
+/src/data/clone-sheet-source.json
+/public/data/fragrance-atlas.json
 
-# compiled catalog — rebuilt from src/data/fragrances.json by `prebuild`
+# compiled catalog — rebuilt locally from fragrances.json
 /src/data/generated/
+
+# private scrape/build tooling, migrations, and ops docs
+/scripts/
+/supabase/
+/docs/
+/SCRIPTS.md
 
 # debug
 npm-debug.log*
@@ -63,5 +64,3 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-.vercel

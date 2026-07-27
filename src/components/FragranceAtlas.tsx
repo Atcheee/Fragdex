@@ -96,7 +96,9 @@ export function FragranceAtlas() {
         Math.min(88, value + Math.max(1, (88 - value) * 0.08)),
       );
     }, 120);
-    fetch("/data/fragrance-atlas.json", { signal: controller.signal })
+    const atlasUrl =
+      process.env.NEXT_PUBLIC_ATLAS_URL?.trim() || "/data/fragrance-atlas.json";
+    fetch(atlasUrl, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("Atlas data unavailable");
         return response.json() as Promise<{ points: AtlasPoint[] }>;

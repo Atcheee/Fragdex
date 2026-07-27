@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "prebuild": "npm run generate:catalog && npm run generate:atlas",
     "generate:catalog": "tsx scripts/build-catalog-db.ts",
     "generate:atlas": "tsx scripts/generate-fragrance-atlas.ts",
     "refresh:clones": "tsx scripts/import-clone-data.ts",
