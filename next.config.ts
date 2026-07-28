@@ -26,20 +26,24 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     optimizePackageImports: ["@phosphor-icons/react"],
-    // Turso backs every catalog page. Keep prerendering below the database's
-    // memory/concurrency ceiling when many clone and fragrance routes build.
+    // Keep prerendering concurrency low while many catalog routes query the
+    // same local SQLite database.
     staticGenerationRetryCount: 2,
     staticGenerationMaxConcurrency: 2,
     staticGenerationMinPagesPerWorker: 100,
   },
   // Keep sharp external so its native image-optimizer binding stays intact.
-  serverExternalPackages: ["sharp", "@libsql/client"],
-  // Catalog lives in Turso at runtime; keep the JSON source out of traces.
+  serverExternalPackages: ["sharp"],
+  // Ship only the compressed catalog. The raw database would exceed the
+  // function size cap once combined with application code and sharp.
   outputFileTracingExcludes: {
-    "/**": [
+    "/*": [
       "./src/data/fragrances.json",
       "./src/data/generated/catalog.db",
     ],
+  },
+  outputFileTracingIncludes: {
+    "/*": ["./src/data/generated/catalog.db.gz"],
   },
   images: {
     formats: ["image/avif", "image/webp"],

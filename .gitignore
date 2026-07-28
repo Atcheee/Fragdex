@@ -43,7 +43,9 @@
 /src/data/generated/
 
 # private scrape/build tooling, migrations, and ops docs
-/scripts/
+/scripts/*
+!/scripts/upload-catalog-db.ts
+!/scripts/fetch-catalog-db.mjs
 /supabase/
 /docs/
 /SCRIPTS.md

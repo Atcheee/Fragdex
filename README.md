@@ -31,15 +31,28 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-Copy `.env.example` to `.env.local` and set Turso + Supabase values for a full local run. Catalog queries go to **Turso** (`TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN`) via `@libsql/client` — see helpers in `src/lib/catalog-db.ts`.
+Copy `.env.example` to `.env.local` and set Supabase values for a full local run. Local catalog queries open `src/data/generated/catalog.db` read-only through Node's built-in SQLite API.
 
-The proprietary catalog source, scrape/build tooling, and database migrations are **not** published in this repository. Production deploys do not regenerate the catalog at build time.
+The proprietary catalog source, most scrape/build tooling, and database migrations are **not** published in this repository. Production deploys do not regenerate the catalog at build time.
 
 Optional atlas map data is stored in a **private** Vercel Blob object and served through `/api/atlas` (with a local `public/data/fragrance-atlas.json` fallback for development).
 
+### Catalog deployment
+
+Build and upload a new catalog from a machine containing the private source:
+
+```bash
+npm run generate:catalog
+npm run upload:catalog
+```
+
+`upload:catalog` compresses `catalog.db` and overwrites private Blob object `data/catalog.db.gz`. Redeploy afterward. Vercel's `prebuild` downloads that gzip using `BLOB_READ_WRITE_TOKEN`; Next.js traces only the compressed artifact. On cold start, the server inflates it to `/tmp/scenthub-catalog.db` and opens it read-only.
+
+Neither `catalog.db` nor `catalog.db.gz` belongs in Git. Current catalog is about 189 MB raw and 54 MB gzipped. Excluding the raw database keeps the function under Vercel's 250 MB uncompressed limit without `VERCEL_SUPPORT_LARGE_FUNCTIONS`. Old Turso push utilities may remain in private local tooling, but are obsolete and no longer wired to package scripts.
+
 ## Data and accounts
 
-- Runtime fragrance catalog: Turso (read-only at request time).
+- Runtime fragrance catalog: read-only SQLite, shipped as a private Blob-backed gzip and hydrated to function temp storage.
 - Guests keep progress locally. Signed-in users sync account progress to Supabase Postgres with Row Level Security.
 - Clone pages accept community accuracy votes once the vote tables exist in your Supabase project.
 - Optional Fraganty API key stays device-local and is never included in account sync.
@@ -60,7 +73,7 @@ Light / dark / system (default: system) via `next-themes`, toggle in the header.
 
 - Next.js App Router + TypeScript
 - Tailwind CSS v4
-- Turso / libSQL (catalog)
+- Node SQLite + Vercel Blob (catalog)
 - Supabase Auth + Postgres (accounts)
 - zustand (persisted store)
 - next-themes
@@ -69,7 +82,7 @@ Light / dark / system (default: system) via `next-themes`, toggle in the header.
 
 - `src/lib/types.ts` — domain types
 - `src/lib/modes.ts` — game mode metadata
-- `src/lib/catalog-db.ts` — Turso connection and row helpers
+- `src/lib/catalog-db.ts` — read-only SQLite hydration and row helpers
 - `src/lib/catalog.ts` — catalog lookups, search, related fragrances, game pools
 - `src/lib/data-source.ts` — seed + Fraganty pool providers
 - `src/lib/engines/` — pure round-generation logic per game family
