@@ -51,7 +51,7 @@ export async function generateMetadata({
       : undefined;
 
   return {
-    title: `${fragrance.name} by ${fragrance.house} — Fragdex`,
+    title: `${fragrance.name} by ${fragrance.house} — Scenthub`,
     description,
     alternates: { canonical: `/fragrance/${fragrance.slug}` },
     openGraph: {

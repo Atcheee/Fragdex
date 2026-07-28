@@ -49,7 +49,7 @@ export async function generateMetadata({
   } is listed as an affordable alternative to ${original}. Compare similarity, price, and savings estimates.`;
 
   return {
-    title: `${profile.name} fragrance clone — Fragdex`,
+    title: `${profile.name} fragrance clone — Scenthub`,
     description,
     alternates: { canonical: `/clone/${profile.slug}` },
     openGraph: {

@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import { BrandMark } from "@/components/BrandMark";
 
-export const alt = "Fragdex";
+export const alt = "Scenthub";
 export const size = {
   width: 1200,
   height: 630,
@@ -53,7 +53,7 @@ export default function OpenGraphImage() {
               color: "#f59e0b",
             }}
           >
-            Fragdex
+            Scenthub
           </div>
         </div>
 
@@ -67,7 +67,7 @@ export default function OpenGraphImage() {
               maxWidth: 900,
             }}
           >
-            Your fragrance index.
+            Your scent hub.
           </div>
           <div
             style={{

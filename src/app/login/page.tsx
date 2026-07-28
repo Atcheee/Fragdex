@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { AuthPanel } from "@/components/auth/AuthPanel";
 
-export const metadata: Metadata = { title: "Log in — Fragdex" };
+export const metadata: Metadata = { title: "Log in — Scenthub" };
 
 export default async function LoginPage({
   searchParams,

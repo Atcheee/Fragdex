@@ -5,7 +5,7 @@ import { getCatalogSizeRounded } from "@/lib/catalog";
 export async function generateMetadata(): Promise<Metadata> {
   const catalogSize = await getCatalogSizeRounded();
   return {
-    title: "Fragrance Atlas — Fragdex",
+    title: "Fragrance Atlas — Scenthub",
     description: `Explore more than ${catalogSize.toLocaleString("en-US")} fragrances on an interactive map of notes, accords, era, and rating.`,
     alternates: { canonical: "/atlas" },
   };

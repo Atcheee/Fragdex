@@ -10,7 +10,7 @@ import {
 import { getFragrancesBySlugs } from "@/lib/catalog";
 
 export const metadata: Metadata = {
-  title: "Fragrance clones and affordable alternatives — Fragdex",
+  title: "Fragrance clones and affordable alternatives — Scenthub",
   description:
     "Browse fragrance clones, similarity estimates, listed prices, savings, and their designer or niche originals.",
   alternates: { canonical: "/clones" },

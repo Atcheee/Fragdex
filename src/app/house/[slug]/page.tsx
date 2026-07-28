@@ -32,7 +32,7 @@ export async function generateMetadata({
   const description = `Explore ${house.fragranceCount} fragrances by ${house.name}. Search and filter the collection by name, year, notes, accords, rating, and popularity.`;
 
   return {
-    title: `${house.name} fragrances — Fragdex`,
+    title: `${house.name} fragrances — Scenthub`,
     description,
     alternates: { canonical: `/house/${house.slug}` },
     openGraph: {

@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ??
-  "https://fragdex.vercel.app";
+  "https://scenthub.se";
 
 export default function robots(): MetadataRoute.Robots {
   return {

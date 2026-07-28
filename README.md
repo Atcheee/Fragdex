@@ -1,8 +1,8 @@
-# Fragdex
+# Scenthub
 
 A fragrance catalog, comparison, and discovery platform with twenty-two game modes — built with Next.js (App Router), TypeScript and Tailwind CSS.
 
-Live site: [https://fragdex.vercel.app](https://fragdex.vercel.app)
+Live site: [https://scenthub.se](https://scenthub.se)
 
 ## Game modes
 

@@ -5,7 +5,7 @@ import { getPoolCandidates } from "@/lib/catalog";
 import { fragranceToTasteFragrance } from "@/lib/taste-passport";
 
 export const metadata: Metadata = {
-  title: "Taste Passport — Fragdex",
+  title: "Taste Passport — Scenthub",
   description:
     "Your living fragrance taste profile, shaped by every game and choice.",
   alternates: { canonical: "/passport" },

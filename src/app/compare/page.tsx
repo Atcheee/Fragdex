@@ -21,7 +21,7 @@ import {
 import { accordColor, accordSoftBackground } from "@/lib/visuals/accord-colors";
 
 export const metadata: Metadata = {
-  title: "Compare fragrances — Fragdex",
+  title: "Compare fragrances — Scenthub",
   description:
     "Compare any two fragrances side by side: notes, accords, ratings, popularity, wear occasions, and similarity.",
   alternates: { canonical: "/compare" },

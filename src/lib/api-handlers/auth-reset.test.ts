@@ -18,7 +18,7 @@ test("rejects invalid reset email addresses", () => {
 
 test("builds the recovery callback on the request origin", () => {
   assert.equal(
-    passwordResetRedirectUrl("https://fragdex.vercel.app/api/auth/reset-password"),
-    "https://fragdex.vercel.app/api/auth/callback?next=%2Freset-password",
+    passwordResetRedirectUrl("https://scenthub.se/api/auth/reset-password"),
+    "https://scenthub.se/api/auth/callback?next=%2Freset-password",
   );
 });

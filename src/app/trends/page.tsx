@@ -7,7 +7,7 @@ import {
 } from "@/lib/fragrance-trends";
 
 export const metadata: Metadata = {
-  title: "Fragrance Trend Explorer — Fragdex",
+  title: "Fragrance Trend Explorer — Scenthub",
   description:
     "Compare how fragrance notes, accords, houses, and styles changed across decades.",
   alternates: { canonical: "/trends" },

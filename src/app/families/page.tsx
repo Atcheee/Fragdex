@@ -9,7 +9,7 @@ import { FragranceBottleImage } from "@/components/FragranceBottleImage";
 import { getAllFragranceFamilies } from "@/lib/fragrance-families";
 
 export const metadata: Metadata = {
-  title: "Fragrance family trees — Fragdex",
+  title: "Fragrance family trees — Scenthub",
   description:
     "Explore curated fragrance lines chronologically and compare how notes and accords changed across flankers and concentrations.",
   alternates: { canonical: "/families" },

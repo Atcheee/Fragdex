@@ -20,7 +20,7 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 export async function generateMetadata(): Promise<Metadata> {
   const browseMeta = await getBrowseFragranceMeta();
   return {
-    title: "Browse fragrances — Fragdex",
+    title: "Browse fragrances — Scenthub",
     description: `Browse ${browseMeta.fragranceCount.toLocaleString("en-US")} fragrances by house, accord, release year, rating, and popularity.`,
     alternates: { canonical: "/fragrances" },
   };

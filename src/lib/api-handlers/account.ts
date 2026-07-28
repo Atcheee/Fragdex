@@ -32,7 +32,7 @@ export async function exportGET(): Promise<Response> {
     return new Response(JSON.stringify(snapshot, null, 2), {
       headers: {
         "Cache-Control": "no-store",
-        "Content-Disposition": 'attachment; filename="fragdex-data.json"',
+        "Content-Disposition": 'attachment; filename="scenthub-data.json"',
         "Content-Type": "application/json; charset=utf-8",
       },
     });

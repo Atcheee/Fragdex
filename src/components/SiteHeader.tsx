@@ -14,7 +14,7 @@ export function SiteHeader() {
           className="col-start-1 row-start-1 flex shrink-0 items-center gap-2.5 font-display text-lg font-semibold tracking-tight transition-colors hover:text-accent"
         >
           <BrandMark className="text-accent" size={26} />
-          <span>Fragdex</span>
+          <span>Scenthub</span>
         </Link>
 
         <PrimaryNav />

@@ -15,7 +15,7 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 export async function generateMetadata(): Promise<Metadata> {
   const browseMeta = await getBrowseMeta();
   return {
-    title: "Designer houses — Fragdex",
+    title: "Designer houses — Scenthub",
     description: `Explore ${browseMeta.houseCount.toLocaleString("en-US")} fragrance designer houses and browse their collections, signature accords, ratings, and release years.`,
     alternates: { canonical: "/houses" },
   };
