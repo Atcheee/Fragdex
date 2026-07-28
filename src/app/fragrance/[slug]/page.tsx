@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 import { TreeStructure } from "@phosphor-icons/react/dist/ssr";
 import { AccordBars } from "@/components/AccordBars";
 import { CatalogFragranceCard } from "@/components/CatalogFragranceCard";
@@ -30,6 +31,9 @@ interface FragrancePageProps {
 }
 
 export const dynamicParams = true;
+export const revalidate = 86_400;
+
+const getCachedFragranceBySlug = cache(getFragranceBySlug);
 
 export async function generateStaticParams() {
   return (await getPopularFragranceSlugs()).map((slug) => ({ slug }));
@@ -39,7 +43,7 @@ export async function generateMetadata({
   params,
 }: FragrancePageProps): Promise<Metadata> {
   const { slug } = await params;
-  const fragrance = await getFragranceBySlug(slug);
+  const fragrance = await getCachedFragranceBySlug(slug);
   if (!fragrance) return { title: "Fragrance not found" };
 
   const description =
@@ -66,7 +70,7 @@ export async function generateMetadata({
 
 export default async function FragrancePage({ params }: FragrancePageProps) {
   const { slug } = await params;
-  const fragrance = await getFragranceBySlug(slug);
+  const fragrance = await getCachedFragranceBySlug(slug);
   if (!fragrance) notFound();
 
   const [related, family] = await Promise.all([
@@ -163,6 +167,7 @@ export default async function FragrancePage({ params }: FragrancePageProps) {
               <div className="flex shrink-0 items-center gap-2">
                 <Link
                   href={`/compare?first=${encodeURIComponent(fragrance.slug)}`}
+                  prefetch={false}
                   className="rounded-full border border-border px-3 py-2 text-xs font-semibold text-muted transition-colors hover:border-accent hover:text-foreground"
                 >
                   Compare

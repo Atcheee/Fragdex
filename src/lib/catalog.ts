@@ -22,7 +22,10 @@ import type {
   WearOccasion,
 } from "@/lib/types";
 import { allNotes } from "@/lib/types";
-import { scoreFragranceSimilarity } from "@/lib/fragrance-similarity";
+import {
+  scoreFragranceSimilarity,
+  type SimilarityFragrance,
+} from "@/lib/fragrance-similarity";
 
 export { slugify };
 
@@ -97,6 +100,18 @@ interface SearchCandidateRow {
   image_url: string | null;
 }
 
+interface SimilarityCandidateRow {
+  id: string;
+  house: string;
+  year: number;
+  rating: number;
+  votes: number;
+  top_notes: string;
+  heart_notes: string;
+  base_notes: string;
+  accords: string;
+}
+
 interface SearchCandidate extends CatalogSearchResult {
   nameKey: string;
   houseKey: string;
@@ -128,6 +143,11 @@ const FRAGRANCE_COLUMNS = `
 const SEARCH_CANDIDATE_COLUMNS = `
   f.id, f.slug, f.name, f.name_key, f.house, f.house_key, f.year, f.rating,
   f.votes, f.image_url
+`;
+
+const SIMILARITY_CANDIDATE_COLUMNS = `
+  f.id, f.house, f.year, f.rating, f.votes, f.top_notes, f.heart_notes,
+  f.base_notes, f.accords
 `;
 
 function toFragrance(row: FragranceRow): CatalogFragrance {
@@ -177,6 +197,22 @@ function toSearchCandidate(row: SearchCandidateRow): SearchCandidate {
   };
 }
 
+function toSimilarityCandidate(
+  row: SimilarityCandidateRow,
+): SimilarityFragrance {
+  return {
+    id: row.id,
+    house: row.house,
+    year: row.year,
+    rating: row.rating,
+    votes: row.votes,
+    topNotes: JSON.parse(row.top_notes) as string[],
+    heartNotes: JSON.parse(row.heart_notes) as string[],
+    baseNotes: JSON.parse(row.base_notes) as string[],
+    accords: JSON.parse(row.accords) as string[],
+  };
+}
+
 function toHouseSummary(row: HouseRow): HouseSummary {
   return {
     slug: row.slug,
@@ -202,6 +238,15 @@ async function selectSearchCandidates(
 ): Promise<SearchCandidate[]> {
   return (await all<SearchCandidateRow>(sql, ...parameters)).map(
     toSearchCandidate,
+  );
+}
+
+async function selectSimilarityCandidates(
+  sql: string,
+  ...parameters: SqlParameter[]
+): Promise<SimilarityFragrance[]> {
+  return (await all<SimilarityCandidateRow>(sql, ...parameters)).map(
+    toSimilarityCandidate,
   );
 }
 
@@ -315,6 +360,19 @@ export async function getAllHouseSummaries(): Promise<HouseSummary[]> {
   return (await all<HouseRow>("SELECT * FROM house ORDER BY name")).map(
     toHouseSummary,
   );
+}
+
+export async function getPopularHouseSlugs(
+  limit = 2_000,
+): Promise<string[]> {
+  return (
+    await all<{ slug: string }>(
+      `SELECT slug FROM house
+       ORDER BY fragrance_count DESC, average_rating DESC, name
+       LIMIT ?`,
+      Math.max(1, Math.floor(limit)),
+    )
+  ).map((row) => row.slug);
 }
 
 /**
@@ -615,9 +673,9 @@ export async function getRelatedFragrances(
     ...new Set([...fragrance.accords, ...allNotes(fragrance)].map(searchKey)),
   ].filter(Boolean);
 
-  const candidates = new Map<string, CatalogFragrance>();
-  for (const entry of await selectFragrances(
-    `SELECT ${FRAGRANCE_COLUMNS} FROM fragrance f
+  const candidates = new Map<string, SimilarityFragrance>();
+  for (const entry of await selectSimilarityCandidates(
+    `SELECT ${SIMILARITY_CANDIDATE_COLUMNS} FROM fragrance f
      WHERE f.house_slug = ?
      ORDER BY f.votes DESC
      LIMIT ${RELATED_CANDIDATE_LIMIT}`,
@@ -628,8 +686,8 @@ export async function getRelatedFragrances(
 
   if (termKeys.length > 0) {
     const placeholders = termKeys.map(() => "?").join(",");
-    for (const entry of await selectFragrances(
-      `SELECT ${FRAGRANCE_COLUMNS} FROM fragrance f
+    for (const entry of await selectSimilarityCandidates(
+      `SELECT ${SIMILARITY_CANDIDATE_COLUMNS} FROM fragrance f
        WHERE f.rowid IN (
          SELECT ft.fragrance_rowid FROM fragrance_term ft
          JOIN term t ON t.id = ft.term_id
@@ -644,10 +702,10 @@ export async function getRelatedFragrances(
   }
   candidates.delete(fragrance.id);
 
-  return [...candidates.values()]
+  const relatedIds = [...candidates.values()]
     .map((candidate) => ({
       candidate,
-      score: getCatalogSimilarity(fragrance, candidate).rankScore,
+      score: scoreFragranceSimilarity(fragrance, candidate).overallScore,
     }))
     .sort(
       (a, b) =>
@@ -656,7 +714,16 @@ export async function getRelatedFragrances(
         b.candidate.rating - a.candidate.rating,
     )
     .slice(0, Math.max(1, limit))
-    .map(({ candidate }) => candidate);
+    .map(({ candidate }) => candidate.id);
+
+  const related = await getFragrancesByIds(relatedIds);
+  const relatedById = new Map(
+    related.map((candidate) => [candidate.id, candidate]),
+  );
+  return relatedIds.flatMap((id) => {
+    const candidate = relatedById.get(id);
+    return candidate ? [candidate] : [];
+  });
 }
 
 export function getCatalogSimilarity(
