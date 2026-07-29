@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { isVercelBlobUrl } from "@/lib/blob-url";
 import { bottleCandidates } from "@/lib/bottle-images";
 
@@ -69,14 +69,20 @@ export function FragranceBottleImage({
   const candidates = bottleCandidates(imageUrl, {
     preferOpaque: !preferCutout,
   });
-  const [candidateIndex, setCandidateIndex] = useState(0);
+  const candidateKey = `${imageUrl ?? ""}:${preferCutout}`;
+  const [candidateState, setCandidateState] = useState({
+    key: candidateKey,
+    index: 0,
+  });
+  const candidateIndex =
+    candidateState.key === candidateKey ? candidateState.index : 0;
   const src = candidates[candidateIndex];
 
-  useEffect(() => {
-    setCandidateIndex(0);
-  }, [imageUrl, preferCutout]);
-
-  const advance = () => setCandidateIndex((index) => index + 1);
+  const advance = () =>
+    setCandidateState((current) => ({
+      key: candidateKey,
+      index: current.key === candidateKey ? current.index + 1 : 1,
+    }));
 
   let media: React.ReactNode;
   if (!src) {
@@ -87,6 +93,8 @@ export function FragranceBottleImage({
       />
     );
   } else if (canOptimizeSrc(src)) {
+    // Bottle CDNs already serve display-sized assets. Loading them directly
+    // also keeps images available when Vercel's optimizer quota is exhausted.
     media = (
       <Image
         key={src}
@@ -95,6 +103,7 @@ export function FragranceBottleImage({
         width={width}
         height={height}
         sizes={sizes}
+        unoptimized={!src.startsWith("/")}
         className={className}
         referrerPolicy="no-referrer"
         onError={advance}
