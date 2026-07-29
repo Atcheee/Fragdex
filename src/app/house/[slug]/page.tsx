@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 import { AccordBars } from "@/components/AccordBars";
 import {
   FragranceCollectionBrowser,
@@ -14,19 +15,15 @@ interface HousePageProps {
   params: Promise<{ slug: string }>;
 }
 
-// Generate house pages on first request, then refresh their cached output daily.
-export const dynamicParams = true;
-export const revalidate = 86400;
+export const dynamic = "force-dynamic";
 
-export function generateStaticParams() {
-  return [];
-}
+const getCachedHouseBySlug = cache(getHouseBySlug);
 
 export async function generateMetadata({
   params,
 }: HousePageProps): Promise<Metadata> {
   const { slug } = await params;
-  const house = await getHouseBySlug(slug);
+  const house = await getCachedHouseBySlug(slug);
   if (!house) return { title: "Fragrance house not found" };
 
   const description = `Explore ${house.fragranceCount} fragrances by ${house.name}. Search and filter the collection by name, year, notes, accords, rating, and popularity.`;
@@ -46,7 +43,7 @@ export async function generateMetadata({
 
 export default async function HousePage({ params }: HousePageProps) {
   const { slug } = await params;
-  const house = await getHouseBySlug(slug);
+  const house = await getCachedHouseBySlug(slug);
   if (!house) notFound();
 
   const collection: HouseCollectionItem[] = house.fragrances.map(

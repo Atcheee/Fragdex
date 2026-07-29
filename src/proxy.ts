@@ -2,7 +2,23 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSupabasePublicConfig } from "@/lib/supabase/config";
 
+const BLOCKED_CRAWLER_USER_AGENTS = ["claudebot", "claude-searchbot"];
+
 export async function proxy(request: NextRequest) {
+  const userAgent = request.headers.get("user-agent")?.toLowerCase() ?? "";
+  if (
+    BLOCKED_CRAWLER_USER_AGENTS.some((crawler) =>
+      userAgent.includes(crawler),
+    )
+  ) {
+    return new NextResponse("Forbidden", {
+      status: 403,
+      headers: {
+        "X-Robots-Tag": "noindex, nofollow",
+      },
+    });
+  }
+
   const config = getSupabasePublicConfig();
   if (!config) return NextResponse.next({ request });
 

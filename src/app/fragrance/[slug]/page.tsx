@@ -21,7 +21,6 @@ import {
 import { fragranceToTasteFragrance } from "@/lib/taste-passport";
 import {
   getFragranceBySlug,
-  getPopularFragranceSlugs,
   getRelatedFragrances,
 } from "@/lib/catalog";
 import { getFragranceFamilyForFragrance } from "@/lib/fragrance-families";
@@ -30,14 +29,9 @@ interface FragrancePageProps {
   params: Promise<{ slug: string }>;
 }
 
-export const dynamicParams = true;
-export const revalidate = 86_400;
+export const dynamic = "force-dynamic";
 
 const getCachedFragranceBySlug = cache(getFragranceBySlug);
-
-export async function generateStaticParams() {
-  return (await getPopularFragranceSlugs()).map((slug) => ({ slug }));
-}
 
 export async function generateMetadata({
   params,
@@ -168,6 +162,7 @@ export default async function FragrancePage({ params }: FragrancePageProps) {
                 <Link
                   href={`/compare?first=${encodeURIComponent(fragrance.slug)}`}
                   prefetch={false}
+                  rel="nofollow"
                   className="rounded-full border border-border px-3 py-2 text-xs font-semibold text-muted transition-colors hover:border-accent hover:text-foreground"
                 >
                   Compare

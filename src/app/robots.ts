@@ -8,7 +8,7 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
       {
-        userAgent: "ClaudeBot",
+        userAgent: ["ClaudeBot", "Claude-SearchBot"],
         disallow: "/",
       },
       {
