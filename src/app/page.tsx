@@ -18,20 +18,6 @@ export default async function Home() {
           Browse {catalogSize} perfumes, compare notes and accords, discover
           affordable alternatives, or learn through interactive scent games.
         </p>
-        <div className="mt-7 flex flex-wrap gap-3">
-          <Link
-            href="/fragrances"
-            className="inline-flex min-h-11 items-center rounded-full bg-accent px-6 text-sm font-semibold text-[#17120a] transition-transform hover:-translate-y-0.5"
-          >
-            Browse fragrances
-          </Link>
-          <Link
-            href="#games"
-            className="inline-flex min-h-11 items-center rounded-full border border-border px-6 text-sm font-semibold hover:border-accent hover:bg-card"
-          >
-            Explore games
-          </Link>
-        </div>
       </section>
 
       <Link
