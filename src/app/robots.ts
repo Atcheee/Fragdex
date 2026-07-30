@@ -15,11 +15,17 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
   );
 
   return {
-    rules: {
-      userAgent: "*",
-      allow: "/",
-      disallow: ["/api/"],
-    },
+    rules: [
+      {
+        userAgent: ["ClaudeBot", "Claude-SearchBot"],
+        disallow: "/",
+      },
+      {
+        userAgent: "*",
+        allow: "/",
+        disallow: ["/api/"],
+      },
+    ],
     sitemap: [absoluteUrl("/sitemap.xml"), ...fragranceSitemaps],
     host: SITE_URL,
   };
