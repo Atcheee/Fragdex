@@ -117,7 +117,14 @@ export function FragranceSearch() {
       overlayInputRef.current?.focus();
     });
     const previousOverflow = document.body.style.overflow;
+    const previousPaddingRight = document.body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
     document.body.style.overflow = "hidden";
+    if (scrollbarWidth > 0) {
+      const currentPaddingRight =
+        Number.parseFloat(window.getComputedStyle(document.body).paddingRight) || 0;
+      document.body.style.paddingRight = `${currentPaddingRight + scrollbarWidth}px`;
+    }
 
     function onDialogKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
@@ -155,6 +162,7 @@ export function FragranceSearch() {
       window.cancelAnimationFrame(frame);
       document.removeEventListener("keydown", onDialogKeyDown);
       document.body.style.overflow = previousOverflow;
+      document.body.style.paddingRight = previousPaddingRight;
       window.requestAnimationFrame(() => {
         returnFocusTarget?.focus();
       });
@@ -355,7 +363,7 @@ export function FragranceSearch() {
                         ? `${listboxId}-option-${activeIndex}`
                         : undefined
                     }
-                    className="h-11 w-full rounded-full border border-border bg-background pl-10 pr-10 text-base outline-none transition-[border-color,box-shadow] placeholder:text-muted focus:border-accent focus:ring-2 focus:ring-accent-soft"
+                    className="h-11 w-full rounded-full border border-border bg-background pl-10 pr-10 text-base outline-none transition-[border-color,box-shadow] placeholder:text-muted focus:border-accent focus:ring-0 focus-visible:outline-none"
                   />
                   {loading ? (
                     <span
@@ -469,7 +477,7 @@ export function FragranceSearch() {
             onClick={openOverlay}
             aria-label="Search fragrances"
             aria-haspopup="dialog"
-            className="h-10 w-full cursor-text rounded-full border border-border bg-card pl-10 pr-10 text-left text-base text-muted outline-none transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent-soft"
+            className="h-10 w-full cursor-text rounded-full border border-border bg-card pl-10 pr-10 text-left text-base text-muted outline-none transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:ring-0 focus-visible:outline-none"
           >
             Search fragrances or houses…
           </button>
