@@ -246,7 +246,7 @@ export function GameController({ meta, cloneEntries }: GameControllerProps) {
       <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-6 py-4 sm:py-10 animate-card-in">
         <Link
           href="/#games"
-          className="w-fit text-sm font-medium text-muted transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
+          className="inline-flex min-h-6 w-fit items-center text-sm font-medium text-muted transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
         >
           ← All games
         </Link>

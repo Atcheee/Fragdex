@@ -3,12 +3,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { AccordBars } from "@/components/AccordBars";
+import { JsonLd } from "@/components/JsonLd";
 import {
   FragranceCollectionBrowser,
   type HouseCollectionItem,
 } from "@/components/FragranceCollectionBrowser";
 import { HouseMark } from "@/components/game/HouseMark";
 import { getHouseBySlug } from "@/lib/catalog";
+import { absoluteUrl } from "@/lib/site";
 import { allNotes } from "@/lib/types";
 
 interface HousePageProps {
@@ -67,9 +69,57 @@ export default async function HousePage({ params }: HousePageProps) {
         ? String(house.firstYear)
         : `${house.firstYear}–${house.latestYear}`
       : "Not listed";
+  const houseSchema = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "CollectionPage",
+        "@id": absoluteUrl(`/house/${house.slug}#collection`),
+        url: absoluteUrl(`/house/${house.slug}`),
+        name: `${house.name} fragrances`,
+        description: `Explore ${house.fragranceCount} fragrances by ${house.name}, including notes, accords, ratings, release years, and popularity.`,
+        about: {
+          "@type": "Brand",
+          name: house.name,
+        },
+        mainEntity: {
+          "@type": "ItemList",
+          name: `${house.name} fragrance collection`,
+          numberOfItems: house.fragranceCount,
+        },
+        isPartOf: { "@id": absoluteUrl("/#website") },
+        inLanguage: "en",
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Home",
+            item: absoluteUrl("/"),
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: "Houses",
+            item: absoluteUrl("/houses"),
+          },
+          {
+            "@type": "ListItem",
+            position: 3,
+            name: house.name,
+            item: absoluteUrl(`/house/${house.slug}`),
+          },
+        ],
+      },
+    ],
+  };
 
   return (
-    <div className="flex flex-col gap-8">
+    <>
+      <JsonLd data={houseSchema} />
+      <div className="flex flex-col gap-8">
       <nav aria-label="Breadcrumb" className="text-sm text-muted">
         <ol className="flex items-center gap-2">
           <li>
@@ -148,7 +198,8 @@ export default async function HousePage({ params }: HousePageProps) {
         houseName={house.name}
         items={collection}
       />
-    </div>
+      </div>
+    </>
   );
 }
 

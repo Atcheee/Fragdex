@@ -70,7 +70,7 @@ export default async function FragranceFamiliesPage() {
           </div>
           <Link
             href="/fragrances"
-            className="text-sm font-semibold text-accent hover:underline"
+            className="inline-flex min-h-6 items-center text-sm font-semibold text-accent hover:underline"
           >
             Browse all fragrances
           </Link>

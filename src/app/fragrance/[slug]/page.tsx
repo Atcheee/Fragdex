@@ -5,6 +5,7 @@ import { cache } from "react";
 import { TreeStructure } from "@phosphor-icons/react/dist/ssr";
 import { AccordBars } from "@/components/AccordBars";
 import { CatalogFragranceCard } from "@/components/CatalogFragranceCard";
+import { JsonLd } from "@/components/JsonLd";
 import {
   CloneAlternativesSection,
   CloneOriginsSection,
@@ -24,6 +25,7 @@ import {
   getRelatedFragrances,
 } from "@/lib/catalog";
 import { getFragranceFamilyForFragrance } from "@/lib/fragrance-families";
+import { absoluteUrl } from "@/lib/site";
 
 interface FragrancePageProps {
   params: Promise<{ slug: string }>;
@@ -74,9 +76,124 @@ export default async function FragrancePage({ params }: FragrancePageProps) {
   const cloneAlternatives = getCloneAlternativesForOriginal(fragrance.slug);
   const cloneOrigins = getOriginalsForCatalogClone(fragrance.slug);
   const heroSrc = primaryBottleSrc(fragrance.imageUrl);
+  const description =
+    fragrance.description ||
+    `Explore ${fragrance.name} by ${fragrance.house}: notes, accords, rating, and related fragrances.`;
+  const properties = [
+    fragrance.year > 0
+      ? {
+          "@type": "PropertyValue",
+          name: "Release year",
+          value: String(fragrance.year),
+        }
+      : undefined,
+    fragrance.accords.length > 0
+      ? {
+          "@type": "PropertyValue",
+          name: "Main accords",
+          value: fragrance.accords.join(", "),
+        }
+      : undefined,
+    fragrance.topNotes.length > 0
+      ? {
+          "@type": "PropertyValue",
+          name: "Top notes",
+          value: fragrance.topNotes.join(", "),
+        }
+      : undefined,
+    fragrance.heartNotes.length > 0
+      ? {
+          "@type": "PropertyValue",
+          name: "Heart notes",
+          value: fragrance.heartNotes.join(", "),
+        }
+      : undefined,
+    fragrance.baseNotes.length > 0
+      ? {
+          "@type": "PropertyValue",
+          name: "Base notes",
+          value: fragrance.baseNotes.join(", "),
+        }
+      : undefined,
+    fragrance.longevity
+      ? {
+          "@type": "PropertyValue",
+          name: "Longevity",
+          value: fragrance.longevity,
+        }
+      : undefined,
+    fragrance.sillage
+      ? {
+          "@type": "PropertyValue",
+          name: "Sillage",
+          value: fragrance.sillage,
+        }
+      : undefined,
+  ].filter((property) => property !== undefined);
+  const fragranceSchema = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Product",
+        "@id": absoluteUrl(`/fragrance/${fragrance.slug}#product`),
+        name: fragrance.name,
+        description,
+        url: absoluteUrl(`/fragrance/${fragrance.slug}`),
+        image: heroSrc ? absoluteUrl(heroSrc) : undefined,
+        category: "Fragrance",
+        brand: {
+          "@type": "Brand",
+          name: fragrance.house,
+          url: absoluteUrl(`/house/${fragrance.houseSlug}`),
+        },
+        aggregateRating:
+          fragrance.rating > 0 && fragrance.votes
+            ? {
+                "@type": "AggregateRating",
+                ratingValue: fragrance.rating,
+                bestRating: 5,
+                worstRating: 1,
+                ratingCount: fragrance.votes,
+              }
+            : undefined,
+        additionalProperty: properties,
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Home",
+            item: absoluteUrl("/"),
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: "Fragrances",
+            item: absoluteUrl("/fragrances"),
+          },
+          {
+            "@type": "ListItem",
+            position: 3,
+            name: fragrance.house,
+            item: absoluteUrl(`/house/${fragrance.houseSlug}`),
+          },
+          {
+            "@type": "ListItem",
+            position: 4,
+            name: fragrance.name,
+            item: absoluteUrl(`/fragrance/${fragrance.slug}`),
+          },
+        ],
+      },
+    ],
+  };
 
   return (
-    <article className="flex flex-col gap-8">
+    <>
+      <JsonLd data={fragranceSchema} />
+      <article className="flex flex-col gap-8">
       {heroSrc ? (
         <>
           <link rel="preconnect" href="https://img.fraganty.ai" />
@@ -301,7 +418,8 @@ export default async function FragrancePage({ params }: FragrancePageProps) {
           </div>
         </section>
       ) : null}
-    </article>
+      </article>
+    </>
   );
 }
 

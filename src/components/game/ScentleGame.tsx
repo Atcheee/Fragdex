@@ -14,6 +14,10 @@ import { FragranceBottleImage } from "@/components/FragranceBottleImage";
 import { FragranceSearchResultVisual } from "@/components/FragranceSearchResultVisual";
 import { dailyStreak, utcDateKey } from "@/lib/daily";
 import {
+  getCachedCatalogSearch,
+  searchCatalogClient,
+} from "@/lib/catalog-search-client";
+import {
   SCENTLE_MAX_GUESSES,
   type ScentleFragranceSummary,
   type ScentleGuessFeedback,
@@ -79,18 +83,17 @@ export function ScentleGame({ meta }: { meta: GameModeMeta }) {
     const normalizedQuery = query.trim();
     if (normalizedQuery.length < 2 || finished) return;
 
+    const delay = getCachedCatalogSearch(normalizedQuery, 10) ? 0 : 180;
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       setLoading(true);
       try {
-        const response = await fetch(
-          `/api/catalog/search?q=${encodeURIComponent(normalizedQuery)}&limit=10`,
-          { signal: controller.signal },
-        );
-        if (!response.ok) throw new Error("Search failed");
-        const data = (await response.json()) as { results?: SearchResult[] };
-        setResults(data.results ?? []);
-        setActiveIndex(data.results?.length ? 0 : -1);
+        const nextResults = await searchCatalogClient(normalizedQuery, {
+          limit: 10,
+          signal: controller.signal,
+        });
+        setResults(nextResults);
+        setActiveIndex(nextResults.length ? 0 : -1);
       } catch (searchError) {
         if (
           !(searchError instanceof DOMException && searchError.name === "AbortError")
@@ -101,7 +104,7 @@ export function ScentleGame({ meta }: { meta: GameModeMeta }) {
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
-    }, 180);
+    }, delay);
 
     return () => {
       window.clearTimeout(timer);
@@ -297,6 +300,7 @@ export function ScentleGame({ meta }: { meta: GameModeMeta }) {
               ref={searchRef}
               type="search"
               role="combobox"
+              aria-label="Search for a fragrance guess"
               value={query}
               onChange={(event) => {
                 const nextQuery = event.target.value;

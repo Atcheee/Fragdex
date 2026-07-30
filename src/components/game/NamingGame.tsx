@@ -158,7 +158,11 @@ export function NamingGame({
       </div>
 
       <form ref={formRef} onSubmit={handleSubmit} className="flex gap-2">
+        <label htmlFor="naming-game-guess" className="sr-only">
+          Fragrance name
+        </label>
         <input
+          id="naming-game-guess"
           ref={inputRef}
           value={input}
           onChange={(e) => setInput(e.target.value)}

@@ -10,6 +10,10 @@ import {
   X,
 } from "@phosphor-icons/react";
 import { FragranceSearchResultVisual } from "@/components/FragranceSearchResultVisual";
+import {
+  getCachedCatalogSearch,
+  searchCatalogClient,
+} from "@/lib/catalog-search-client";
 
 export interface ComparisonPickerFragrance {
   id: string;
@@ -146,20 +150,17 @@ function FragranceField({
       return;
     }
 
+    const delay = getCachedCatalogSearch(normalized) ? 0 : 180;
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       setLoading(true);
       try {
-        const response = await fetch(
-          `/api/catalog/search?q=${encodeURIComponent(normalized)}`,
-          { signal: controller.signal },
-        );
-        if (!response.ok) throw new Error("Search request failed");
-        const data = (await response.json()) as {
-          results?: ComparisonPickerFragrance[];
-        };
         setResults(
-          (data.results ?? []).filter((result) => result.id !== excludedId),
+          (
+            await searchCatalogClient(normalized, {
+              signal: controller.signal,
+            })
+          ).filter((result) => result.id !== excludedId),
         );
       } catch (error) {
         if (!(error instanceof DOMException && error.name === "AbortError")) {
@@ -168,7 +169,7 @@ function FragranceField({
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
-    }, 180);
+    }, delay);
 
     return () => {
       window.clearTimeout(timer);

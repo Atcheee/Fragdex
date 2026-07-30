@@ -34,9 +34,6 @@ export function LazyFragranceSearch() {
 function SearchPlaceholder({ onActivate }: { onActivate?: () => void }) {
   return (
     <div className="relative w-full max-w-none md:max-w-md">
-      <label className="sr-only" htmlFor="fragrance-search-placeholder">
-        Search fragrances
-      </label>
       <span
         aria-hidden
         className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted"
@@ -45,16 +42,14 @@ function SearchPlaceholder({ onActivate }: { onActivate?: () => void }) {
           <path d="M229.66 218.34l-50.07-50.06a88.11 88.11 0 1 0-11.31 11.31l50.06 50.07a8 8 0 0 0 11.32-11.32ZM40 112a72 72 0 1 1 72 72 72.08 72.08 0 0 1-72-72Z" />
         </svg>
       </span>
-      <input
-        id="fragrance-search-placeholder"
-        type="search"
-        readOnly
-        placeholder="Search fragrances or houses…"
-        autoComplete="off"
-        onFocus={onActivate}
+      <button
+        type="button"
+        aria-label="Search fragrances"
         onClick={onActivate}
-        className="h-10 w-full cursor-text rounded-full border border-border bg-card pl-10 pr-10 text-base outline-none placeholder:text-muted"
-      />
+        className="h-10 w-full cursor-text rounded-full border border-border bg-card pl-10 pr-10 text-left text-base text-muted outline-none transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent-soft"
+      >
+        Search fragrances or houses…
+      </button>
     </div>
   );
 }

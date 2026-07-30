@@ -16,7 +16,7 @@ export function ThemeToggle() {
   return (
     <div
       className="flex items-center gap-0.5 rounded-full border border-border bg-card p-1"
-      role="radiogroup"
+      role="group"
       aria-label="Theme"
     >
       {OPTIONS.map(({ value, label, icon: Icon }) => {
@@ -24,8 +24,8 @@ export function ThemeToggle() {
         return (
           <button
             key={value}
-            role="radio"
-            aria-checked={active}
+            type="button"
+            aria-pressed={active}
             title={label}
             onClick={() => setTheme(value)}
             className={`rounded-full p-1.5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${

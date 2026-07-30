@@ -20,7 +20,7 @@ export function HeaderAccount() {
   ) : (
     <Link
       href="/login"
-      className="rounded-full border border-border bg-card px-3 py-2 text-xs font-bold hover:border-accent"
+      className="whitespace-nowrap rounded-full border border-border bg-card px-3 py-2 text-xs font-bold hover:border-accent"
     >
       Log in
     </Link>

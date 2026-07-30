@@ -9,6 +9,7 @@ export const metadata: Metadata = {
   description:
     "Your living fragrance taste profile, shaped by every game and choice.",
   alternates: { canonical: "/passport" },
+  robots: { index: false, follow: true },
 };
 
 export default async function TastePassportPage() {

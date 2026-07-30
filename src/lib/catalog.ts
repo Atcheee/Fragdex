@@ -150,6 +150,13 @@ const SIMILARITY_CANDIDATE_COLUMNS = `
   f.base_notes, f.accords
 `;
 
+const SEARCH_RESULT_CACHE_LIMIT = 250;
+const SHORT_SEARCH_CANDIDATE_LIMIT = 250;
+const searchResultCache = new Map<
+  string,
+  Promise<CatalogSearchResult[]>
+>();
+
 function toFragrance(row: FragranceRow): CatalogFragrance {
   return {
     id: row.id,
@@ -391,7 +398,38 @@ export async function searchCatalog(
   const terms = expandBrandSearchTerms(normalized.split(" "), searchKey);
   if (terms.length === 0) return [];
   const expandedQuery = terms.join(" ");
+  const resultLimit = Math.max(1, Math.min(limit, 20));
+  const cacheKey = `${resultLimit}:${normalized}`;
+  const cached = searchResultCache.get(cacheKey);
+  if (cached) {
+    searchResultCache.delete(cacheKey);
+    searchResultCache.set(cacheKey, cached);
+    return cached;
+  }
 
+  const pending = searchCatalogUncached(
+    normalized,
+    terms,
+    expandedQuery,
+    resultLimit,
+  ).catch((error) => {
+    searchResultCache.delete(cacheKey);
+    throw error;
+  });
+  searchResultCache.set(cacheKey, pending);
+  if (searchResultCache.size > SEARCH_RESULT_CACHE_LIMIT) {
+    const oldestKey = searchResultCache.keys().next().value;
+    if (oldestKey) searchResultCache.delete(oldestKey);
+  }
+  return pending;
+}
+
+async function searchCatalogUncached(
+  normalized: string,
+  terms: string[],
+  expandedQuery: string,
+  resultLimit: number,
+): Promise<CatalogSearchResult[]> {
   const candidates = new Map<string, SearchCandidate>();
   const [indexedCandidates, exactCandidates] = await Promise.all([
     findSearchCandidates(terms),
@@ -413,7 +451,6 @@ export async function searchCatalog(
     candidates.set(fragrance.id, fragrance);
   }
 
-  const resultLimit = Math.max(1, Math.min(limit, 20));
   const literalMatches = rankSearchCandidates(
     [...candidates.values()],
     terms,
@@ -609,13 +646,50 @@ async function findSearchCandidates(
     );
   }
 
-  return selectSearchCandidates(
-    `SELECT ${SEARCH_CANDIDATE_COLUMNS} FROM fragrance f
-     WHERE ${conditions || "1"}
-     ORDER BY f.votes DESC
-     LIMIT ${SEARCH_CANDIDATE_LIMIT}`,
-    ...filters,
-  );
+  return findShortPrefixCandidates(terms);
+}
+
+/**
+ * FTS5's trigram tokenizer cannot index two-character input. Keep these first
+ * keystrokes responsive with B-tree prefix lookups instead of scanning the
+ * full catalog. Three-character input restores normal substring matching.
+ */
+async function findShortPrefixCandidates(
+  terms: string[],
+): Promise<SearchCandidate[]> {
+  const prefix = [...terms].sort((a, b) => b.length - a.length)[0];
+  if (!prefix) return [];
+
+  const upperBound = `${prefix}\uffff`;
+  const housePrefix = slugify(prefix);
+  const houseUpperBound = `${housePrefix}\uffff`;
+  const [nameMatches, houseMatches] = await Promise.all([
+    selectSearchCandidates(
+      `SELECT ${SEARCH_CANDIDATE_COLUMNS} FROM fragrance f
+       WHERE f.name_key >= ? AND f.name_key < ?
+       ORDER BY f.votes DESC
+       LIMIT ${SHORT_SEARCH_CANDIDATE_LIMIT}`,
+      prefix,
+      upperBound,
+    ),
+    selectSearchCandidates(
+      `SELECT ${SEARCH_CANDIDATE_COLUMNS} FROM fragrance f
+       WHERE f.house_slug >= ? AND f.house_slug < ?
+       ORDER BY f.votes DESC
+       LIMIT ${SHORT_SEARCH_CANDIDATE_LIMIT}`,
+      housePrefix,
+      houseUpperBound,
+    ),
+  ]);
+
+  return [
+    ...new Map(
+      [...nameMatches, ...houseMatches].map((candidate) => [
+        candidate.id,
+        candidate,
+      ]),
+    ).values(),
+  ];
 }
 
 async function findFuzzySearchCandidates(

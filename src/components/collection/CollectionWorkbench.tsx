@@ -30,6 +30,10 @@ import {
   type CollectionStatus,
   type SimilarityBreakdown,
 } from "@/lib/fragrance-collection";
+import {
+  getCachedCatalogSearch,
+  searchCatalogClient,
+} from "@/lib/catalog-search-client";
 import { useHydrated } from "@/lib/useHydrated";
 
 const STATUS_META: Record<
@@ -89,17 +93,16 @@ export function CollectionWorkbench({
   useEffect(() => {
     const normalizedQuery = query.trim();
     if (normalizedQuery.length < 2) return;
+    const delay = getCachedCatalogSearch(normalizedQuery) ? 0 : 180;
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       setSearching(true);
       try {
-        const response = await fetch(
-          `/api/catalog/search?q=${encodeURIComponent(normalizedQuery)}`,
-          { signal: controller.signal },
+        setResults(
+          await searchCatalogClient(normalizedQuery, {
+            signal: controller.signal,
+          }),
         );
-        if (!response.ok) throw new Error("Search failed");
-        const data = (await response.json()) as { results?: SearchResult[] };
-        setResults(data.results ?? []);
       } catch (error) {
         if (!(error instanceof DOMException && error.name === "AbortError")) {
           setResults([]);
@@ -107,7 +110,7 @@ export function CollectionWorkbench({
       } finally {
         if (!controller.signal.aborted) setSearching(false);
       }
-    }, 180);
+    }, delay);
     return () => {
       window.clearTimeout(timer);
       controller.abort();

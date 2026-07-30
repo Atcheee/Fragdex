@@ -107,8 +107,10 @@ export function FragranceBottleImage({
         className={className}
         referrerPolicy="no-referrer"
         onError={advance}
-        priority={eager}
-        {...(eager ? {} : { loading: "lazy" as const })}
+        preload={eager}
+        {...(eager
+          ? {}
+          : { loading: "lazy" as const, fetchPriority: "low" as const })}
         decoding="async"
       />
     );
@@ -126,7 +128,7 @@ export function FragranceBottleImage({
         referrerPolicy="no-referrer"
         onError={advance}
         loading={eager ? "eager" : "lazy"}
-        fetchPriority={eager ? "high" : "auto"}
+        fetchPriority={eager ? "high" : "low"}
         decoding="async"
       />
     );

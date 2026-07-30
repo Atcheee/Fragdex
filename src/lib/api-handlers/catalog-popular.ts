@@ -10,7 +10,10 @@ export async function GET(request: Request) {
     { results: await getPopularCatalogFragrances(limit) },
     {
       headers: {
-        "Cache-Control": "public, max-age=600, stale-while-revalidate=86400",
+        "Cache-Control":
+          "public, max-age=3600, stale-while-revalidate=86400",
+        "CDN-Cache-Control":
+          "public, max-age=2592000, stale-while-revalidate=7776000",
       },
     },
   );

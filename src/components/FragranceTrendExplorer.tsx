@@ -155,7 +155,7 @@ export function FragranceTrendExplorer({
           <button
             type="button"
             onClick={resetExplorer}
-            className="text-sm font-semibold text-accent hover:underline"
+            className="inline-flex min-h-6 items-center text-sm font-semibold text-accent hover:underline"
           >
             Reset filters
           </button>
@@ -468,11 +468,12 @@ function YearSlider({
       </span>
       <input
         type="range"
+        aria-label={label}
         min={minimum}
         max={maximum}
         value={value}
         onChange={(event) => onChange(Number(event.target.value))}
-        className="mt-3 h-2 w-full accent-[var(--accent)]"
+        className="mt-1 h-6 w-full accent-[var(--accent)]"
       />
     </label>
   );

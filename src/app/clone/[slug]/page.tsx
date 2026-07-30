@@ -10,6 +10,7 @@ import {
   CloneCommunityFact,
 } from "@/components/CloneAccuracyVote";
 import { FragranceBottleImage } from "@/components/FragranceBottleImage";
+import { JsonLd } from "@/components/JsonLd";
 import {
   getFragranceBySlug,
   getFragrancesBySlugs,
@@ -23,6 +24,7 @@ import {
   getCloneSlugs,
   type CloneRelationship,
 } from "@/lib/clone-data";
+import { absoluteUrl } from "@/lib/site";
 
 interface ClonePageProps {
   params: Promise<{ slug: string }>;
@@ -88,9 +90,65 @@ export default async function ClonePage({ params }: ClonePageProps) {
   const featuredOriginal = featuredRelationship.originalCatalogSlug
     ? catalogBySlug.get(featuredRelationship.originalCatalogSlug)
     : undefined;
+  const cloneSchema = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Product",
+        "@id": absoluteUrl(`/clone/${profile.slug}#product`),
+        name: profile.name,
+        url: absoluteUrl(`/clone/${profile.slug}`),
+        description: `${profile.name}${
+          profile.house ? ` by ${profile.house}` : ""
+        } is listed as an affordable alternative to ${featuredRelationship.originalName}.`,
+        image: cloneFragrance?.imageUrl
+          ? absoluteUrl(cloneFragrance.imageUrl)
+          : undefined,
+        category: "Fragrance",
+        brand: profile.house
+          ? { "@type": "Brand", name: profile.house }
+          : undefined,
+        isSimilarTo: profile.relationships.map((relationship) => ({
+          "@type": "Product",
+          name: relationship.originalName,
+          url: relationship.originalCatalogSlug
+            ? absoluteUrl(
+                `/fragrance/${relationship.originalCatalogSlug}`,
+              )
+            : undefined,
+          category: "Fragrance",
+        })),
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Home",
+            item: absoluteUrl("/"),
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: "Fragrance clones",
+            item: absoluteUrl("/clones"),
+          },
+          {
+            "@type": "ListItem",
+            position: 3,
+            name: profile.name,
+            item: absoluteUrl(`/clone/${profile.slug}`),
+          },
+        ],
+      },
+    ],
+  };
 
   return (
-    <article className="flex flex-col gap-8">
+    <>
+      <JsonLd data={cloneSchema} />
+      <article className="flex flex-col gap-8">
       <nav aria-label="Breadcrumb" className="text-sm text-muted">
         <ol className="flex flex-wrap items-center gap-2">
           <li>
@@ -282,7 +340,8 @@ export default async function ClonePage({ params }: ClonePageProps) {
           .
         </p>
       </section>
-    </article>
+      </article>
+    </>
   );
 }
 

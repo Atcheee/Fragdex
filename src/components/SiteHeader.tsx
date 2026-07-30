@@ -8,8 +8,12 @@ import { HeaderAccount } from "@/components/auth/HeaderAccount";
 export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background md:bg-background/95 md:backdrop-blur-md">
-      <div className="mx-auto grid w-full max-w-7xl grid-cols-[auto_1fr_auto] items-center gap-x-4 gap-y-3 px-5 py-3 sm:px-8 md:grid-cols-[auto_auto_minmax(0,1fr)_auto] md:py-0 md:min-h-16">
+      <div
+        data-site-header-grid
+        className="mx-auto grid w-full max-w-7xl grid-cols-[auto_1fr_auto] items-center gap-x-4 gap-y-3 px-5 py-3 sm:px-8 md:grid-cols-[auto_auto_minmax(0,1fr)_auto] md:py-0 md:min-h-16"
+      >
         <Link
+          data-site-brand
           href="/"
           className="col-start-1 row-start-1 flex shrink-0 items-center gap-2.5 font-display text-lg font-semibold tracking-tight transition-colors hover:text-accent"
         >
@@ -27,8 +31,9 @@ export function SiteHeader() {
         </div>
 
         <nav
+          data-site-utilities
           aria-label="Utility navigation"
-          className="col-start-3 row-start-1 flex shrink-0 items-center gap-4 justify-self-end md:col-start-4"
+          className="col-start-3 row-start-1 flex shrink-0 items-center gap-2 justify-self-end sm:gap-4 md:col-start-4"
         >
           <ThemeToggle />
           <HeaderAccount />

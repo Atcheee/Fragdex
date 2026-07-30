@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { createPortal, preconnect } from "react-dom";
 import {
   ClockCounterClockwise,
   Fire,
@@ -21,15 +21,13 @@ import {
   getRecentFragrances,
   type RecentFragrance,
 } from "@/lib/recent-fragrances";
+import {
+  getCachedCatalogSearch,
+  searchCatalogClient,
+  type CatalogSearchItem,
+} from "@/lib/catalog-search-client";
 
-interface SearchResult {
-  id: string;
-  name: string;
-  house: string;
-  year: number;
-  slug: string;
-  imageUrl?: string;
-}
+type SearchResult = CatalogSearchItem;
 
 type DiscoverySectionKind = "recent" | "favorites" | "popular";
 
@@ -39,20 +37,29 @@ interface DiscoverySection {
 }
 
 export function FragranceSearch() {
+  preconnect("https://fimgs.net");
+  preconnect("https://img.fraganty.ai");
+  preconnect("https://media.thescentbase.com");
+
   const router = useRouter();
-  const triggerRef = useRef<HTMLInputElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const overlayInputRef = useRef<HTMLInputElement>(null);
   const listboxId = useId();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
-  const [overlayOpen, setOverlayOpen] = useState(false);
+  const [overlayOpen, setOverlayOpen] = useState(true);
   const [loading, setLoading] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
-  const [favorites, setFavorites] = useState<FavoriteFragrance[]>([]);
-  const [recent, setRecent] = useState<RecentFragrance[]>([]);
+  const [favorites, setFavorites] = useState<FavoriteFragrance[]>(() =>
+    getFavoriteFragrances().slice(0, 9),
+  );
+  const [recent, setRecent] = useState<RecentFragrance[]>(
+    getRecentFragrances,
+  );
   const [popular, setPopular] = useState<SearchResult[]>([]);
   const [popularLoading, setPopularLoading] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const mounted = typeof document !== "undefined";
 
   const normalizedQuery = query.trim();
   const searching = normalizedQuery.length >= 2;
@@ -100,22 +107,57 @@ export function FragranceSearch() {
   const showDiscovery = overlayOpen && !searching;
 
   useEffect(() => {
-    setMounted(true);
-    setFavorites(getFavoriteFragrances().slice(0, 9));
-    setRecent(getRecentFragrances());
-    setOverlayOpen(true);
-  }, []);
-
-  useEffect(() => {
     if (!overlayOpen) return;
+    const previouslyFocused =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    const returnFocusTarget = triggerRef.current ?? previouslyFocused;
     const frame = window.requestAnimationFrame(() => {
       overlayInputRef.current?.focus();
     });
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+
+    function onDialogKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setOverlayOpen(false);
+        setActiveIndex(-1);
+        return;
+      }
+      if (event.key !== "Tab") return;
+
+      const focusable = Array.from(
+        dialogRef.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      ).filter((element) => element.getClientRects().length > 0);
+      if (focusable.length === 0) {
+        event.preventDefault();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || !dialogRef.current?.contains(active))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener("keydown", onDialogKeyDown);
     return () => {
       window.cancelAnimationFrame(frame);
+      document.removeEventListener("keydown", onDialogKeyDown);
       document.body.style.overflow = previousOverflow;
+      window.requestAnimationFrame(() => {
+        returnFocusTarget?.focus();
+      });
     };
   }, [overlayOpen]);
 
@@ -124,47 +166,45 @@ export function FragranceSearch() {
     if (popular.length > 0) return;
 
     const controller = new AbortController();
-    setPopularLoading(true);
-    void (async () => {
-      try {
-        const response = await fetch("/api/catalog/popular?limit=9", {
-          signal: controller.signal,
-        });
-        if (!response.ok) throw new Error("Popular request failed");
-        const data = (await response.json()) as { results?: SearchResult[] };
-        setPopular(data.results ?? []);
-      } catch (error) {
-        if (!(error instanceof DOMException && error.name === "AbortError")) {
-          setPopular([]);
+    const timer = window.setTimeout(() => {
+      setPopularLoading(true);
+      void (async () => {
+        try {
+          const response = await fetch("/api/catalog/popular?limit=9", {
+            signal: controller.signal,
+          });
+          if (!response.ok) throw new Error("Popular request failed");
+          const data = (await response.json()) as { results?: SearchResult[] };
+          setPopular(data.results ?? []);
+        } catch (error) {
+          if (!(error instanceof DOMException && error.name === "AbortError")) {
+            setPopular([]);
+          }
+        } finally {
+          if (!controller.signal.aborted) setPopularLoading(false);
         }
-      } finally {
-        if (!controller.signal.aborted) setPopularLoading(false);
-      }
-    })();
+      })();
+    }, 0);
 
-    return () => controller.abort();
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
   }, [overlayOpen, searching, popular.length]);
 
   useEffect(() => {
-    if (!searching) {
-      setResults([]);
-      setLoading(false);
-      setActiveIndex(-1);
-      return;
-    }
+    if (!searching) return;
 
+    const delay = getCachedCatalogSearch(normalizedQuery) ? 0 : 100;
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       setLoading(true);
       try {
-        const response = await fetch(
-          `/api/catalog/search?q=${encodeURIComponent(normalizedQuery)}`,
-          { signal: controller.signal },
-        );
-        if (!response.ok) throw new Error("Search request failed");
-        const data = (await response.json()) as { results?: SearchResult[] };
-        setResults(data.results ?? []);
-        setActiveIndex(data.results?.length ? 0 : -1);
+        const nextResults = await searchCatalogClient(normalizedQuery, {
+          signal: controller.signal,
+        });
+        setResults(nextResults);
+        setActiveIndex(nextResults.length ? 0 : -1);
       } catch (error) {
         if (!(error instanceof DOMException && error.name === "AbortError")) {
           setResults([]);
@@ -173,7 +213,7 @@ export function FragranceSearch() {
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
-    }, 100);
+    }, delay);
 
     return () => {
       window.clearTimeout(timer);
@@ -206,7 +246,6 @@ export function FragranceSearch() {
   function closeOverlay() {
     setOverlayOpen(false);
     setActiveIndex(-1);
-    triggerRef.current?.blur();
   }
 
   function goToResult(result: SearchResult) {
@@ -257,6 +296,7 @@ export function FragranceSearch() {
               onClick={closeOverlay}
             />
             <div
+              ref={dialogRef}
               role="dialog"
               aria-modal="true"
               aria-label="Search fragrances"
@@ -290,15 +330,26 @@ export function FragranceSearch() {
                     role="combobox"
                     value={query}
                     onChange={(event) => {
-                      setQuery(event.target.value);
+                      const nextQuery = event.target.value;
+                      setQuery(nextQuery);
                       setActiveIndex(-1);
+                      if (nextQuery.trim().length < 2) {
+                        setResults([]);
+                        setLoading(false);
+                      }
                     }}
                     onKeyDown={handleKeyDown}
                     placeholder="Search fragrances or houses…"
                     autoComplete="off"
                     aria-autocomplete="list"
-                    aria-expanded={showResults || showDiscovery}
-                    aria-controls={listboxId}
+                    aria-expanded={
+                      searching ? showResults : showDiscovery && discoverySections.length > 0
+                    }
+                    aria-controls={
+                      searching || discoverySections.length > 0
+                        ? listboxId
+                        : undefined
+                    }
                     aria-activedescendant={
                       activeIndex >= 0
                         ? `${listboxId}-option-${activeIndex}`
@@ -319,6 +370,8 @@ export function FragranceSearch() {
                       aria-label="Clear search"
                       onClick={() => {
                         setQuery("");
+                        setResults([]);
+                        setLoading(false);
                         setActiveIndex(-1);
                         overlayInputRef.current?.focus();
                       }}
@@ -403,9 +456,6 @@ export function FragranceSearch() {
   return (
     <>
       <div className="relative w-full max-w-none md:max-w-md">
-        <label htmlFor={`${listboxId}-trigger`} className="sr-only">
-          Search fragrances
-        </label>
         <div className="relative">
           <span
             aria-hidden
@@ -413,20 +463,16 @@ export function FragranceSearch() {
           >
             <MagnifyingGlass aria-hidden size={17} weight="regular" />
           </span>
-          <input
+          <button
             ref={triggerRef}
-            id={`${listboxId}-trigger`}
-            type="search"
-            readOnly
-            value=""
-            onFocus={openOverlay}
+            type="button"
             onClick={openOverlay}
-            placeholder="Search fragrances or houses…"
-            autoComplete="off"
+            aria-label="Search fragrances"
             aria-haspopup="dialog"
-            aria-expanded={overlayOpen}
-            className="h-10 w-full cursor-text rounded-full border border-border bg-card pl-10 pr-10 text-base outline-none transition-[border-color,box-shadow] placeholder:text-muted focus:border-accent focus:ring-2 focus:ring-accent-soft"
-          />
+            className="h-10 w-full cursor-text rounded-full border border-border bg-card pl-10 pr-10 text-left text-base text-muted outline-none transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent-soft"
+          >
+            Search fragrances or houses…
+          </button>
         </div>
       </div>
       {overlay}
@@ -459,13 +505,17 @@ function DiscoveryPanel({
     );
   }
 
-  let optionOffset = 0;
-
   return (
-    <div className="flex flex-col gap-6">
-      {sections.map((section) => {
-        const startIndex = optionOffset;
-        optionOffset += section.items.length;
+    <div
+      id={listboxId}
+      role="listbox"
+      aria-label="Suggested fragrances"
+      className="flex flex-col gap-6"
+    >
+      {sections.map((section, sectionIndex) => {
+        const startIndex = sections
+          .slice(0, sectionIndex)
+          .reduce((total, item) => total + item.items.length, 0);
         return (
           <DiscoverySectionBlock
             key={section.kind}
@@ -546,8 +596,7 @@ function DiscoverySectionBlock({
         </p>
       ) : (
         <ul
-          id={kind === "recent" ? listboxId : undefined}
-          role="listbox"
+          role="none"
           className="grid grid-cols-1 gap-1.5 sm:grid-cols-2"
           onMouseLeave={() => onActiveIndexChange(-1)}
         >

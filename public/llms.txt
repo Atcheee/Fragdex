@@ -1,0 +1,29 @@
+# Scenthub
+
+> Scenthub is an independent fragrance discovery library with perfume profiles, notes, accords, houses, comparisons, family trees, affordable-alternative relationships, and interactive scent games.
+
+Canonical site: https://scenthub.se
+Language: English
+
+## Primary resources
+
+- [Fragrance catalog](https://scenthub.se/fragrances): Search and filter fragrance profiles by house, accord, rating, popularity, and release year.
+- [Fragrance houses](https://scenthub.se/houses): Browse house collections, signature accords, ratings, and release ranges.
+- [Compare fragrances](https://scenthub.se/compare): Compare notes, accords, ratings, wear signals, and catalog similarity side by side.
+- [Fragrance clones](https://scenthub.se/clones): Sourced affordable-alternative relationships with similarity, price, savings, and community accuracy signals.
+- [Fragrance family trees](https://scenthub.se/families): Manually curated fragrance lineages with verification sources.
+- [Fragrance trends](https://scenthub.se/trends): Explore how notes, accords, houses, and styles vary across decades.
+- [About and methodology](https://scenthub.se/about): Catalog scope, interpretation guidance, curation, source transparency, and limitations.
+
+## Interpretation notes
+
+- Ratings, prices, popularity, wear data, and similarity are approximate catalog signals.
+- Coverage varies by fragrance; missing values are shown rather than inferred.
+- Clone relationships describe scent inspiration, not product identity or brand affiliation.
+- Family pages and clone pages provide source links for their curated or source-specific claims.
+- Product names and trademarks belong to their respective owners.
+
+## Discovery
+
+- [Main sitemap](https://scenthub.se/sitemap.xml)
+- [Robots policy](https://scenthub.se/robots.txt)

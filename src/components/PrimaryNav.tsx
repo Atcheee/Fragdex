@@ -183,7 +183,6 @@ function NavDropdown({
       <button
         type="button"
         aria-expanded={open}
-        aria-haspopup="menu"
         aria-controls={menuId}
         onClick={() => onOpenChange(!open)}
         className={`flex w-full min-h-11 items-center justify-center gap-1.5 rounded-xl px-2.5 py-1.5 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent md:min-h-0 md:w-auto md:rounded-full md:px-3.5 md:py-1.5 ${
@@ -195,10 +194,10 @@ function NavDropdown({
         <GroupIcon
           size={16}
           weight={active || open ? "fill" : "regular"}
-          className="shrink-0 md:size-[15px]"
+          className="hidden shrink-0 sm:block md:size-[15px]"
           aria-hidden
         />
-        <span className="truncate">{group.label}</span>
+        <span>{group.label}</span>
         <CaretDown
           size={12}
           weight="bold"
@@ -210,8 +209,6 @@ function NavDropdown({
       {open ? (
         <div
           id={menuId}
-          role="menu"
-          aria-label={group.label}
           className={`absolute top-[calc(100%+0.4rem)] z-50 w-max min-w-[11.5rem] rounded-2xl border border-border bg-card p-1.5 shadow-[0_12px_40px_color-mix(in_oklab,var(--foreground)_12%,transparent)] ${menuAlign}`}
         >
           {group.items.map(({ href, label, icon: Icon, isActive }) => {
@@ -220,7 +217,6 @@ function NavDropdown({
               <Link
                 key={href}
                 href={href}
-                role="menuitem"
                 prefetch={false}
                 aria-current={itemActive ? "page" : undefined}
                 onClick={() => onOpenChange(false)}
@@ -255,6 +251,7 @@ export function PrimaryNav() {
 
   return (
     <nav
+      data-primary-navigation
       aria-label="Primary navigation"
       className="col-span-3 row-start-3 md:col-span-1 md:col-start-2 md:row-start-1"
     >

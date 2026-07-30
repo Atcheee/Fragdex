@@ -14,6 +14,10 @@ import Link from "next/link";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { FragranceBottleImage } from "@/components/FragranceBottleImage";
 import { NoteImage } from "@/components/NoteImage";
+import {
+  getCachedCatalogSearch,
+  searchCatalogClient,
+} from "@/lib/catalog-search-client";
 import type {
   NoteTier,
   SwapNoteFragrance,
@@ -91,17 +95,16 @@ export function SwapNoteWorkbench() {
     if (normalizedQuery.length < 2 || selected) {
       return;
     }
+    const delay = getCachedCatalogSearch(normalizedQuery) ? 0 : 180;
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       setSearching(true);
       try {
-        const response = await fetch(
-          `/api/catalog/search?q=${encodeURIComponent(normalizedQuery)}`,
-          { signal: controller.signal },
+        setSearchResults(
+          await searchCatalogClient(normalizedQuery, {
+            signal: controller.signal,
+          }),
         );
-        if (!response.ok) throw new Error("Search failed.");
-        const data = (await response.json()) as { results?: SearchResult[] };
-        setSearchResults(data.results ?? []);
       } catch (requestError) {
         if (
           !(requestError instanceof DOMException) ||
@@ -112,7 +115,7 @@ export function SwapNoteWorkbench() {
       } finally {
         if (!controller.signal.aborted) setSearching(false);
       }
-    }, 180);
+    }, delay);
     return () => {
       window.clearTimeout(timer);
       controller.abort();

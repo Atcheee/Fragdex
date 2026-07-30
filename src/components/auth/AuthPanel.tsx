@@ -330,19 +330,31 @@ function AuthLinks({ mode }: { mode: AuthMode }) {
     <div className="mt-6 flex flex-wrap justify-center gap-x-4 gap-y-2 text-sm">
       {mode === "login" ? (
         <>
-          <Link href="/signup" className="font-semibold text-accent hover:underline">
+          <Link
+            href="/signup"
+            className="inline-flex min-h-6 items-center font-semibold text-accent hover:underline"
+          >
             Create account
           </Link>
-          <Link href="/forgot-password" className="text-muted hover:text-foreground">
+          <Link
+            href="/forgot-password"
+            className="inline-flex min-h-6 items-center text-muted hover:text-foreground"
+          >
             Forgot password?
           </Link>
         </>
       ) : (
-        <Link href="/login" className="font-semibold text-accent hover:underline">
+        <Link
+          href="/login"
+          className="inline-flex min-h-6 items-center font-semibold text-accent hover:underline"
+        >
           Back to login
         </Link>
       )}
-      <Link href="/" className="text-muted hover:text-foreground">
+      <Link
+        href="/"
+        className="inline-flex min-h-6 items-center text-muted hover:text-foreground"
+      >
         Continue as guest
       </Link>
     </div>
