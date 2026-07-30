@@ -363,6 +363,7 @@ export function FragranceSearch() {
                         ? `${listboxId}-option-${activeIndex}`
                         : undefined
                     }
+                    data-search-focus
                     className="h-11 w-full rounded-full border border-border bg-background pl-10 pr-10 text-base outline-none transition-[border-color,box-shadow] placeholder:text-muted focus:border-accent focus:ring-0 focus-visible:outline-none"
                   />
                   {loading ? (
@@ -477,6 +478,7 @@ export function FragranceSearch() {
             onClick={openOverlay}
             aria-label="Search fragrances"
             aria-haspopup="dialog"
+            data-search-focus
             className="h-10 w-full cursor-text rounded-full border border-border bg-card pl-10 pr-10 text-left text-base text-muted outline-none transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:ring-0 focus-visible:outline-none"
           >
             Search fragrances or houses…
