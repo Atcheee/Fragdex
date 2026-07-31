@@ -2,7 +2,11 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSupabasePublicConfig } from "@/lib/supabase/config";
 
-const BLOCKED_CRAWLER_USER_AGENTS = ["claudebot", "claude-searchbot"];
+const BLOCKED_CRAWLER_USER_AGENTS = [
+  "claudebot",
+  "claude-searchbot",
+  "gptbot",
+];
 
 export async function proxy(request: NextRequest) {
   const userAgent = request.headers.get("user-agent")?.toLowerCase() ?? "";

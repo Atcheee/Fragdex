@@ -17,7 +17,7 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
   return {
     rules: [
       {
-        userAgent: ["ClaudeBot", "Claude-SearchBot"],
+        userAgent: ["ClaudeBot", "Claude-SearchBot", "GPTBot"],
         disallow: "/",
       },
       {
